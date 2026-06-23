@@ -680,7 +680,7 @@
         const ph = document.getElementById('sw-editor-placeholder');
         const ed = document.getElementById('sw-port-editor');
         if (portNum === null) { ph.style.display = ''; ed.style.display = 'none'; return; }
-        ph.style.display = 'none'; ed.style.display = '';
+        ph.style.display = 'none'; ed.style.display = 'block';
         const cfg = (device || switchModalDevice).ports[portNum] || {};
         document.getElementById('sw-port-editor-title').textContent = `Port ${portNum}`;
         SW_FIELDS.forEach(([id, key, def]) => { document.getElementById(id).value = cfg[key] ?? def; });

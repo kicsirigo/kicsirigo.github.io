@@ -16,10 +16,12 @@ Vibecoded with Gemini & refined using minimalist code design principles.
   - 🟢 **Switch (SW)** (with realistic port configuration popups)
   - 🌸 **Patch Panel (PP)**
   - 🟡 **Access Point (AP)**
+  - 🔵 **Client PC (PC)**
 - **⚡ Switch Port Customization**: Click on any placed Switch to open an interactive switch faceplate view where you can customize individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
+- **🧲 Snap to Grid**: Toggle a 20px visual grid overlay and automatically snap devices and cable joints to grid intersections for precise alignments.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
-- 💾 **PNG Export**: Save your annotated floorplan along with cables, devices, and measurements as a PNG image.
+- 📄 **PDF Export**: Save your annotated floorplan along with cables, devices, and measurements as a PDF document.
 - ⚡ **Auto-save**: Automatically saves your current workspace in the browser's local storage so you never lose your progress.
 
 ---
@@ -35,7 +37,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Click **Draw Cables** and tap/click along the floorplan to measure paths.
    - Use **New Cable** to start a separate segment with different colors.
 4. **Place Devices**:
-   - Select a device from the sidebar (Router, Switch, Patch Panel, or AP).
+   - Select a device from the sidebar (Router, Switch, Patch Panel, AP, or PC).
    - Click anywhere on the map to place the device. Active device selection will show a visual pulse.
 5. **Configure Switches**:
    - Click on any placed Switch device to open its visual faceplate configuration.
@@ -43,7 +45,8 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 6. **Manage & Refine**:
    - **Right-Click** (or long tap) on any device or point to rename or delete it.
    - Press `Ctrl + Z` or click **Undo** to roll back your last action.
-7. **Export**: Click **Export** to download your annotated floorplan as an image.
+   - Toggle **🧲 Grid** to overlay a positioning grid and enable smart snapping for cables and devices.
+7. **Export**: Click **Export** to download your annotated floorplan as a PDF.
 
 ---
 
@@ -53,3 +56,4 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - **Vanilla CSS3** - Customized styling with CSS custom properties (variables) for theme management.
 - **Vanilla JavaScript** - Clean, zero-framework logic.
 - **PDF.js** - Client-side rendering of PDF documents.
+- **jsPDF** - Client-side PDF generation.

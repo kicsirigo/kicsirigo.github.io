@@ -790,6 +790,9 @@
             });
         }
 
+        // Close camera transform
+        ctx.restore();
+
         // Calculate lengths always to keep status up-to-date
         let totalMeters = 0;
         cables.forEach((cable, cIndex) => {

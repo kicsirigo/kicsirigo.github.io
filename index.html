@@ -385,7 +385,7 @@
 
     const i18n = {
         en: {
-            help: "Zoom: Wheel | Pan: Right Click / Touch Move | Menu: Right Click",
+            help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
             btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export",
             sideTitle: "Devices",
@@ -406,7 +406,7 @@
             promptRename: "Enter a new name for this device:"
         },
         hu: {
-            help: "Nagyítás: Egérgörgő | Mozgatás: Jobb klikk / Érintés | Menü: Jobb klikk",
+            help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Export",
             sideTitle: "Eszközök",
@@ -448,8 +448,10 @@
     let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
     let showLayers = true, snapToGrid = false;
+    let gridOffsetX = 0, gridOffsetY = 0;
 
     let cameraX = 0, cameraY = 0, zoom = 1, isPanning = false, panStartX = 0, panStartY = 0;
+    let isPanningGrid = false, gridPanStartX = 0, gridPanStartY = 0;
     let draggedPoint = null, activePlaceDevice = null, activeContextMenuTarget = null, hasDragged = false;
     
     // ponytail: Removed custom crosshair variables
@@ -494,6 +496,8 @@
         cables = data.cables || [[]];
         devices = data.devices || [];
         pixelsPerMeter = data.pixelsPerMeter || null;
+        gridOffsetX = data.gridOffsetX || 0;
+        gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
         btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
@@ -747,6 +751,15 @@
         const wPos = getWorldPos(e), hov = findHoveredPoint(wPos), btn = isTouch ? 0 : e.button;
         hasDragged = false;
 
+        if (e.shiftKey && img.src) {
+            isPanningGrid = true;
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+            gridPanStartX = clientX - gridOffsetX * zoom;
+            gridPanStartY = clientY - gridOffsetY * zoom;
+            return;
+        }
+
         if (btn === 2 || btn === 1 || (btn === 0 && e.ctrlKey) || (!hov && mode === 'none' && !activePlaceDevice)) {
             isPanning = true; panStartX = (isTouch ? e.touches[0].clientX : e.clientX) - cameraX; panStartY = (isTouch ? e.touches[0].clientY : e.clientY) - cameraY;
             return;
@@ -790,6 +803,16 @@
     function handleMove(e, isTouch) {
         if (!img.src) return;
 
+        if (isPanningGrid) {
+            hasDragged = true;
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+            gridOffsetX = (clientX - gridPanStartX) / zoom;
+            gridOffsetY = (clientY - gridPanStartY) / zoom;
+            redraw();
+            return;
+        }
+
         if (isPanning) { 
             hasDragged = true;
             cameraX = (isTouch ? e.touches[0].clientX : e.clientX) - panStartX; cameraY = (isTouch ? e.touches[0].clientY : e.clientY) - panStartY; redraw(); return; 
@@ -810,6 +833,7 @@
 
     function handleEnd() {
         isPanning = false;
+        isPanningGrid = false;
         // Single click (no drag) on a switch device → open switch modal
         if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && devices[draggedPoint.index].type === 'switch' && !activePlaceDevice && mode === 'none') {
             const dev = devices[draggedPoint.index];
@@ -818,7 +842,7 @@
             openSwitchModal(dev);
             return;
         }
-        if (draggedPoint) autoSave();
+        if (draggedPoint || hasDragged) autoSave();
         draggedPoint = null;
         redraw();
     }
@@ -847,7 +871,11 @@
 
     function applyGridSnap(pos) {
         if (!snapToGrid) return pos;
-        return { x: Math.round(pos.x / 20) * 20, y: Math.round(pos.y / 20) * 20 };
+        const gridSize = 20;
+        return {
+            x: Math.round((pos.x - gridOffsetX) / gridSize) * gridSize + gridOffsetX,
+            y: Math.round((pos.y - gridOffsetY) / gridSize) * gridSize + gridOffsetY
+        };
     }
 
     // Snapping helper
@@ -864,7 +892,7 @@
     // Auto-save logic
     function autoSave() {
         if (!img.src) return;
-        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY };
+        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
         if (img.src.length < 1500000) data.imgSrc = img.src;
         localStorage.setItem('measurer_workspace', JSON.stringify(data));
     }
@@ -918,7 +946,7 @@
         }
     });
 
-    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; redraw(); autoSave(); } });
+    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
 
     btnExport.addEventListener('click', () => {
         if (!img.src) return;
@@ -1017,8 +1045,10 @@
             ctx.lineWidth = 1 / zoom;
             const gridSize = 20;
             ctx.beginPath();
-            for (let x = 0; x <= img.width; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, img.height); }
-            for (let y = 0; y <= img.height; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(img.width, y); }
+            const dx = ((gridOffsetX % gridSize) + gridSize) % gridSize;
+            const dy = ((gridOffsetY % gridSize) + gridSize) % gridSize;
+            for (let x = dx; x <= img.width; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, img.height); }
+            for (let y = dy; y <= img.height; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(img.width, y); }
             ctx.stroke();
             ctx.restore();
         }

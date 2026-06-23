@@ -13,9 +13,10 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - **🔌 Cable Estimation**: Draw multiple independent cable runs and get real-time length estimation based on your calibrated scale.
 - **🖥️ Device Placement**: Drag-free click-to-place network components:
   - 🟣 **Router (RT)**
-  - 🟢 **Switch (SW)**
+  - 🟢 **Switch (SW)** (with realistic port configuration popups)
   - 🌸 **Patch Panel (PP)**
   - 🟡 **Access Point (AP)**
+- **⚡ Switch Port Customization**: Click on any placed Switch to open an interactive switch faceplate view where you can customize individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
 - 💾 **PNG Export**: Save your annotated floorplan along with cables, devices, and measurements as a PNG image.
@@ -35,11 +36,14 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Use **New Cable** to start a separate segment with different colors.
 4. **Place Devices**:
    - Select a device from the sidebar (Router, Switch, Patch Panel, or AP).
-   - Click anywhere on the map to place the device.
-5. **Manage & Refine**:
+   - Click anywhere on the map to place the device. Active device selection will show a visual pulse.
+5. **Configure Switches**:
+   - Click on any placed Switch device to open its visual faceplate configuration.
+   - Click on any port to assign its custom label, VLAN, mode (Access/Trunk/Uplink), connection destination, and notes.
+6. **Manage & Refine**:
    - **Right-Click** (or long tap) on any device or point to rename or delete it.
    - Press `Ctrl + Z` or click **Undo** to roll back your last action.
-6. **Export**: Click **Export** to download your annotated floorplan as an image.
+7. **Export**: Click **Export** to download your annotated floorplan as an image.
 
 ---
 

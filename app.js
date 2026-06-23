@@ -1011,3 +1011,54 @@ const i18n = {
             }
         });
     });
+
+    // Drag to scroll for groups-container with smooth momentum
+    const groupsContainer = document.querySelector('.groups-container');
+    if (groupsContainer) {
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let velX = 0;
+        let momentumID;
+
+        groupsContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            groupsContainer.classList.add('active');
+            startX = e.pageX - groupsContainer.offsetLeft;
+            scrollLeft = groupsContainer.scrollLeft;
+            cancelAnimationFrame(momentumID);
+        });
+
+        groupsContainer.addEventListener('mouseleave', () => {
+            isDown = false;
+            groupsContainer.classList.remove('active');
+        });
+
+        groupsContainer.addEventListener('mouseup', () => {
+            isDown = false;
+            groupsContainer.classList.remove('active');
+            beginMomentum();
+        });
+
+        groupsContainer.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - groupsContainer.offsetLeft;
+            const walk = (x - startX) * 2; 
+            let prevScrollLeft = groupsContainer.scrollLeft;
+            groupsContainer.scrollLeft = scrollLeft - walk;
+            velX = groupsContainer.scrollLeft - prevScrollLeft;
+        });
+
+        function beginMomentum() {
+            momentumID = requestAnimationFrame(momentumLoop);
+        }
+
+        function momentumLoop() {
+            if (!isDown && Math.abs(velX) > 0.1) {
+                groupsContainer.scrollLeft += velX;
+                velX *= 0.95; 
+                momentumID = requestAnimationFrame(momentumLoop);
+            }
+        }
+    }

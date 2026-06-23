@@ -79,7 +79,7 @@
         .sidebar-title { font-size: 0.7em; font-weight: bold; text-transform: uppercase; color: var(--subtext); text-align: center; margin-bottom: 5px; }
         .sidebar-item { width: 60px; height: 60px; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: grab; transition: all 0.2s; font-size: 0.7em; font-weight: bold; user-select: none; text-align: center; padding: 2px; }
         .sidebar-item:hover { transform: scale(1.08); box-shadow: 0 4px 10px var(--shadow); }
-        .sidebar-item.active-place { animation: pulseSubtle 1.5s infinite; }
+        .sidebar-item.active-place { }
         .sidebar-item.active-place[data-type="router"] { background: var(--dev-router); color: #11111b !important; border-color: var(--dev-router) !important; }
         .sidebar-item.active-place[data-type="switch"] { background: var(--dev-switch); color: #11111b !important; border-color: var(--dev-switch) !important; }
         .sidebar-item.active-place[data-type="patch"] { background: var(--dev-patch); color: #11111b !important; border-color: var(--dev-patch) !important; }
@@ -115,6 +115,99 @@
         .ctx-item:hover { background: var(--bg); }
         .ctx-item.danger { color: var(--danger); }
         .ctx-item.danger svg { stroke: var(--danger); }
+        /* SWITCH PANEL MODAL */
+        #switch-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        #switch-modal-overlay.open { display: flex; }
+        #switch-modal {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+            width: min(820px, 96vw); max-height: 90vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #switch-modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+            background: #1e2030;
+        }
+        #switch-modal-header .sw-title {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 700; font-size: 1.05em; color: #cad3f5;
+        }
+        #switch-modal-header .sw-title svg { stroke: #8bd5ca; }
+        #switch-modal-close {
+            background: none; border: none; cursor: pointer;
+            color: #a5adcb; font-size: 1.4em; padding: 2px 8px;
+            border-radius: 6px; transition: background 0.15s;
+        }
+        #switch-modal-close:hover { background: var(--border); color: var(--text); transform: none; box-shadow: none; }
+        /* Physical faceplate */
+        #sw-faceplate {
+            background: #12131a; padding: 18px 20px 10px;
+            border-bottom: 1px solid #2a2d3e;
+        }
+        .sw-port-row { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-start; }
+        .sw-port-led {
+            width: 28px; height: 22px; border-radius: 3px;
+            background: #0f0f14; border: 1px solid #2a2d3e;
+            cursor: pointer; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 700; color: #4a4d60;
+            transition: all 0.15s;
+        }
+        .sw-port-led.has-config { background: #0d2b1a; border-color: #40a02b; color: #a6da95; }
+        .sw-port-led.selected { outline: 2px solid #8aadf4; outline-offset: 1px; background: #192040 !important; color: #8aadf4 !important; }
+        .sw-port-led::after {
+            content: '';
+            position: absolute; top: 3px; right: 3px;
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #1a1d2e;
+        }
+        .sw-port-led.has-config::after { background: #40a02b; box-shadow: 0 0 4px #40a02b; }
+        .sw-port-led.selected::after { background: #8aadf4; box-shadow: 0 0 4px #8aadf4; }
+        #sw-port-num-row {
+            display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
+            justify-content: flex-start;
+        }
+        .sw-port-num {
+            width: 28px; text-align: center;
+            font-size: 8px; color: #3a3d50; font-weight: 600;
+        }
+        /* Editor panel */
+        #sw-editor {
+            padding: 16px 20px; overflow-y: auto; flex: 1;
+        }
+        #sw-editor-placeholder {
+            color: var(--subtext); font-size: 0.9em;
+            text-align: center; padding: 30px 0;
+        }
+        #sw-port-editor { display: none; }
+        #sw-port-editor h3 {
+            margin: 0 0 12px; font-size: 1em; color: var(--text);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .sw-field-row {
+            display: grid; grid-template-columns: 120px 1fr; align-items: center;
+            gap: 8px; margin-bottom: 10px;
+        }
+        .sw-field-row label { font-size: 0.85em; font-weight: 600; color: var(--subtext); }
+        .sw-field-row input, .sw-field-row select {
+            padding: 6px 10px; border-radius: 6px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 0.9em; width: 100%; box-sizing: border-box;
+            appearance: auto;
+        }
+        .sw-field-row input:focus, .sw-field-row select:focus { outline: 2px solid var(--accent); }
+        #sw-modal-footer {
+            padding: 12px 20px; border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 10px;
+            background: var(--panel);
+        }
+        #sw-modal-footer button { min-width: 90px; }
     </style>
 </head>
 <body data-theme="light">
@@ -238,6 +331,38 @@
             <span data-i18n="btnUndo">Undo</span>
         </div>
     </div>
+
+<!-- SWITCH PANEL MODAL -->
+<div id="switch-modal-overlay">
+  <div id="switch-modal">
+    <div id="switch-modal-header">
+      <div class="sw-title">
+        <svg class="icon" viewBox="0 0 24 24" style="width:20px;height:20px"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="8" x2="6" y2="16"></line><line x1="10" y1="8" x2="10" y2="16"></line><line x1="14" y1="8" x2="14" y2="16"></line><line x1="18" y1="8" x2="18" y2="16"></line></svg>
+        <span id="sw-modal-title">Switch</span>
+      </div>
+      <button id="switch-modal-close" title="Close">✕</button>
+    </div>
+    <div id="sw-faceplate">
+      <div class="sw-port-row" id="sw-port-leds"></div>
+      <div id="sw-port-num-row"></div>
+    </div>
+    <div id="sw-editor">
+      <div id="sw-editor-placeholder">Click a port to configure it.</div>
+      <div id="sw-port-editor">
+        <h3 id="sw-port-editor-title">Port 1</h3>
+        <div class="sw-field-row"><label>Port label</label><input id="sw-f-label" type="text" placeholder="e.g. PC-01"></div>
+        <div class="sw-field-row"><label>VLAN</label><input id="sw-f-vlan" type="number" min="1" max="4094" placeholder="1"></div>
+        <div class="sw-field-row"><label>Mode</label><select id="sw-f-mode"><option value="access">Access</option><option value="trunk">Trunk</option><option value="uplink">Uplink</option></select></div>
+        <div class="sw-field-row"><label>Connected to</label><input id="sw-f-conn" type="text" placeholder="e.g. PP-1 port 3"></div>
+        <div class="sw-field-row"><label>Notes</label><input id="sw-f-notes" type="text" placeholder="optional notes"></div>
+      </div>
+    </div>
+    <div id="sw-modal-footer">
+      <button id="sw-btn-clear-port" style="background:var(--bg);color:var(--danger);border-color:var(--danger);">Clear Port</button>
+      <button id="sw-btn-save" class="action">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -501,6 +626,112 @@
         }
     });
 
+    // --- SWITCH PANEL LOGIC ---
+    let switchModalDevice = null;
+    let swSelectedPort = null;
+
+    function openSwitchModal(device) {
+        switchModalDevice = device;
+        if (!device.ports) device.ports = {};
+        swSelectedPort = null;
+        document.getElementById('sw-modal-title').textContent = device.name || 'Switch';
+        buildSwitchFaceplate(device);
+        showSwEditor(null);
+        document.getElementById('switch-modal-overlay').classList.add('open');
+    }
+
+    function buildSwitchFaceplate(device) {
+        const portCount = device.portCount || 24;
+        const ledRow = document.getElementById('sw-port-leds');
+        const numRow = document.getElementById('sw-port-num-row');
+        ledRow.innerHTML = '';
+        numRow.innerHTML = '';
+        for (let p = 1; p <= portCount; p++) {
+            const led = document.createElement('div');
+            led.className = 'sw-port-led';
+            led.textContent = p;
+            led.dataset.port = p;
+            const cfg = device.ports[p];
+            if (cfg && (cfg.label || cfg.vlan || cfg.conn)) led.classList.add('has-config');
+            led.addEventListener('click', () => selectSwPort(p, device));
+            ledRow.appendChild(led);
+            const num = document.createElement('div');
+            num.className = 'sw-port-num';
+            num.textContent = p;
+            numRow.appendChild(num);
+        }
+    }
+
+    function selectSwPort(portNum, device) {
+        swSelectedPort = portNum;
+        document.querySelectorAll('.sw-port-led').forEach(el => el.classList.toggle('selected', +el.dataset.port === portNum));
+        showSwEditor(portNum, device);
+    }
+
+    function showSwEditor(portNum, device) {
+        const ph = document.getElementById('sw-editor-placeholder');
+        const ed = document.getElementById('sw-port-editor');
+        if (portNum === null) { ph.style.display = ''; ed.style.display = 'none'; return; }
+        ph.style.display = 'none'; ed.style.display = '';
+        const cfg = (device || switchModalDevice).ports[portNum] || {};
+        document.getElementById('sw-port-editor-title').textContent = `Port ${portNum}`;
+        document.getElementById('sw-f-label').value = cfg.label || '';
+        document.getElementById('sw-f-vlan').value = cfg.vlan || '';
+        document.getElementById('sw-f-mode').value = cfg.mode || 'access';
+        document.getElementById('sw-f-conn').value = cfg.conn || '';
+        document.getElementById('sw-f-notes').value = cfg.notes || '';
+    }
+
+    function saveCurrentPortFields() {
+        if (swSelectedPort === null || !switchModalDevice) return;
+        const vlanVal = parseInt(document.getElementById('sw-f-vlan').value);
+        const cfg = {
+            label: document.getElementById('sw-f-label').value.trim(),
+            vlan: isNaN(vlanVal) ? null : vlanVal,
+            mode: document.getElementById('sw-f-mode').value,
+            conn: document.getElementById('sw-f-conn').value.trim(),
+            notes: document.getElementById('sw-f-notes').value.trim()
+        };
+        if (cfg.label || cfg.vlan || cfg.conn || cfg.notes) {
+            switchModalDevice.ports[swSelectedPort] = cfg;
+        } else {
+            delete switchModalDevice.ports[swSelectedPort];
+        }
+    }
+
+    document.getElementById('switch-modal-close').addEventListener('click', () => {
+        saveCurrentPortFields();
+        document.getElementById('switch-modal-overlay').classList.remove('open');
+        autoSave(); redraw();
+    });
+
+    document.getElementById('sw-btn-save').addEventListener('click', () => {
+        saveCurrentPortFields();
+        document.getElementById('switch-modal-overlay').classList.remove('open');
+        autoSave(); redraw();
+    });
+
+    document.getElementById('sw-btn-clear-port').addEventListener('click', () => {
+        if (swSelectedPort === null || !switchModalDevice) return;
+        delete switchModalDevice.ports[swSelectedPort];
+        showSwEditor(swSelectedPort, switchModalDevice);
+        buildSwitchFaceplate(switchModalDevice);
+    });
+
+    // Auto-save port fields on input change
+    ['sw-f-label','sw-f-vlan','sw-f-mode','sw-f-conn','sw-f-notes'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => { if (swSelectedPort !== null) saveCurrentPortFields(); });
+    });
+
+    // Close on overlay backdrop click
+    document.getElementById('switch-modal-overlay').addEventListener('click', e => {
+        if (e.target === document.getElementById('switch-modal-overlay')) {
+            saveCurrentPortFields();
+            document.getElementById('switch-modal-overlay').classList.remove('open');
+            autoSave(); redraw();
+        }
+    });
+
     // --- EGÉR ÉS ÉRINTŐ ESEMÉNYEK ---
     function handleStart(e, isTouch) {
         if (!img.src || contextMenu.style.display === 'flex') return;
@@ -513,6 +744,8 @@
         }
 
         if (hov) { draggedPoint = hov; if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; status.innerText = t('statEditCable', activeCableIndex + 1); } redraw(); return; }
+
+        // Double-click on switch opens panel (handled separately via dblclick event)
         
         if (activePlaceDevice && btn === 0) { 
             devices.push({ type: activePlaceDevice, x: wPos.x, y: wPos.y, name: null }); 
@@ -566,6 +799,16 @@
     canvasContainer.addEventListener('mousedown', e => handleStart(e, false));
     canvasContainer.addEventListener('mousemove', e => handleMove(e, false));
     window.addEventListener('mouseup', handleEnd);
+
+    // Double-click on a switch device opens the switch panel modal
+    canvasContainer.addEventListener('dblclick', e => {
+        if (!img.src || activePlaceDevice) return;
+        const wPos = getWorldPos(e);
+        const hov = findHoveredPoint(wPos);
+        if (hov && hov.type === 'device' && devices[hov.index].type === 'switch') {
+            openSwitchModal(devices[hov.index]);
+        }
+    });
 
     canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) handleStart(e, true); }, {passive: true});
     canvasContainer.addEventListener('touchmove', e => { if(e.touches.length === 1) handleMove(e, true); }, {passive: true});

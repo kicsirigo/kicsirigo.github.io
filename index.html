@@ -401,7 +401,11 @@
     <div id="switch-modal-header">
       <div class="sw-title">
         <svg class="icon" viewBox="0 0 24 24" style="width:20px;height:20px"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="8" x2="6" y2="16"></line><line x1="10" y1="8" x2="10" y2="16"></line><line x1="14" y1="8" x2="14" y2="16"></line><line x1="18" y1="8" x2="18" y2="16"></line></svg>
-        <span id="sw-modal-title">Switch</span>
+        <span id="sw-modal-title">Device</span>
+        <div style="margin-left: 20px; font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
+            <label>Ports:</label>
+            <input type="number" id="sw-f-port-count" min="1" max="128" value="24" style="width: 50px; padding: 2px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+        </div>
       </div>
       <button id="switch-modal-close" title="Close">✕</button>
     </div>
@@ -697,18 +701,31 @@
     let switchModalDevice = null;
     let swSelectedPort = null;
 
+    function getDefaultPortCount(type) {
+        if (type === 'switch' || type === 'patchpanel') return 24;
+        if (type === 'router') return 4;
+        return 1;
+    }
+
     function openSwitchModal(device) {
         switchModalDevice = device;
         if (!device.ports) device.ports = {};
+        if (!device.portCount) device.portCount = getDefaultPortCount(device.type);
         swSelectedPort = null;
-        document.getElementById('sw-modal-title').textContent = device.name || 'Switch';
+        
+        let titleType = device.type.charAt(0).toUpperCase() + device.type.slice(1);
+        if (device.type === 'patchpanel') titleType = 'Patch Panel';
+        document.getElementById('sw-modal-title').textContent = device.name || titleType;
+        
+        document.getElementById('sw-f-port-count').value = device.portCount;
+        
         buildSwitchFaceplate(device);
         showSwEditor(null);
         document.getElementById('switch-modal-overlay').classList.add('open');
     }
 
     function buildSwitchFaceplate(device) {
-        const portCount = device.portCount || 24;
+        const portCount = device.portCount;
         const ledRow = document.getElementById('sw-port-leds');
         ledRow.innerHTML = '';
         for (let p = 1; p <= portCount; p++) {
@@ -770,6 +787,14 @@
     }
     document.getElementById('switch-modal-close').addEventListener('click', closeSwModal);
     document.getElementById('sw-btn-save').addEventListener('click', closeSwModal);
+    document.getElementById('sw-f-port-count').addEventListener('change', e => {
+        if (!switchModalDevice) return;
+        let count = parseInt(e.target.value);
+        if (isNaN(count) || count < 1) count = 1;
+        switchModalDevice.portCount = count;
+        buildSwitchFaceplate(switchModalDevice);
+        if (swSelectedPort > count) showSwEditor(null);
+    });
 
     document.getElementById('sw-btn-clear-port').addEventListener('click', () => {
         if (swSelectedPort === null || !switchModalDevice) return;
@@ -896,8 +921,8 @@
     function handleEnd() {
         isPanning = false;
         isPanningGrid = false;
-        // Single click (no drag) on a switch device → open switch modal
-        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && devices[draggedPoint.index].type === 'switch' && !activePlaceDevice && mode === 'none') {
+        // Single click (no drag) on a device → open device modal
+        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && mode === 'none') {
             const dev = devices[draggedPoint.index];
             draggedPoint = null;
             redraw();

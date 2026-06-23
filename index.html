@@ -815,6 +815,48 @@
         }
     }
 
+    function loadSavedWorkspace() {
+        const raw = localStorage.getItem('measurer_workspace');
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            if (data.imgSrc) {
+                img.onload = () => {
+                    originalImageWidth = img.width; originalImageHeight = img.height; resizeCanvas();
+                    zoom = data.zoom || zoom;
+                    cameraX = (data.cameraX !== undefined) ? data.cameraX : cameraX;
+                    cameraY = (data.cameraY !== undefined) ? data.cameraY : cameraY;
+                    scalePoints = data.scalePoints || [];
+                    cables = data.cables || [[]];
+                    devices = data.devices || [];
+                    pixelsPerMeter = data.pixelsPerMeter || null;
+                    cableSlack = data.cableSlack || 2.0;
+                    document.getElementById('input-slack').value = cableSlack;
+                    activeCableIndex = cables.length - 1;
+                    btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+                    btnExportJson.disabled = false;
+                    btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
+                    status.innerText = t('statLoaded');
+                    redraw();
+                };
+                img.src = data.imgSrc;
+            } else {
+                scalePoints = data.scalePoints || [];
+                cables = data.cables || [[]];
+                devices = data.devices || [];
+                pixelsPerMeter = data.pixelsPerMeter || null;
+                cableSlack = data.cableSlack || 2.0;
+                document.getElementById('input-slack').value = cableSlack;
+                activeCableIndex = cables.length - 1;
+                if (pixelsPerMeter) {
+                    btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = false;
+                }
+            }
+        } catch (e) {
+            console.error("Error loading saved workspace", e);
+        }
+    }
+
     // Call load on startup
     loadSavedWorkspace();
     updateLanguageUI();

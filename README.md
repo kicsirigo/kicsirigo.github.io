@@ -13,11 +13,12 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - **🔌 Cable Estimation**: Draw multiple independent cable runs and get real-time length estimation based on your calibrated scale.
 - **🖥️ Device Placement**: Drag-free click-to-place network components:
   - 🟣 **Router (RT)**
-  - 🟢 **Switch (SW)** (with realistic port configuration popups)
+  - 🟢 **Switch (SW)**
   - 🌸 **Patch Panel (PP)**
   - 🟡 **Access Point (AP)**
   - 🔵 **Client PC (PC)**
-- **⚡ Switch Port Customization**: Click on any placed Switch to open an interactive switch faceplate view where you can customize individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
+- **⚡ Device Port Customization**: Click on any placed device to open an interactive faceplate configuration. You can dynamically adjust the number of ports (from 1 to 128) and configure individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
+- **🏢 Rack Stacking (Overlapping Devices)**: Devices placed on top of each other (e.g. snapped to the same grid coordinate) automatically visual-stack vertically like a server rack, allowing clean rack layouts while keeping each device fully clickable and configurable.
 - **🧲 Snap to Grid**: Toggle a 20px visual grid overlay, adjust its offset manually by dragging with **Shift**, and automatically snap devices and cable joints to grid intersections for precise alignments.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
@@ -40,8 +41,9 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 4. **Place Devices**:
    - Select a device from the sidebar (Router, Switch, Patch Panel, AP, or PC).
    - Click anywhere on the map to place the device. Active device selection will show a visual pulse.
-5. **Configure Switches**:
-   - Click on any placed Switch device to open its visual faceplate configuration.
+5. **Configure Device Ports**:
+   - Click on any placed device to open its visual faceplate configuration.
+   - Adjust the number of ports to customize the device configuration (e.g. create a 48-port switch, a 2-port patch panel, etc.).
    - Click on any port to assign its custom label, VLAN, mode (Access/Trunk/Uplink), connection destination, and notes.
 6. **Manage & Refine**:
    - **Right-Click** (or long tap) on any device or point to rename or delete it.

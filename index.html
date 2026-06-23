@@ -649,9 +649,9 @@
         }
 
         if (isStackedOnRack) {
-            return { x: d.x, y: d.y - 40 + (stackIndex * 16) };
+            return { x: d.x, y: d.y + (-40 + stackIndex * 16) / zoom };
         } else {
-            return { x: d.x, y: d.y + (stackIndex * 20) };
+            return { x: d.x, y: d.y + (stackIndex * 20) / zoom };
         }
     }
 
@@ -662,8 +662,8 @@
             const d = devices[i];
             
             if (d.type === 'rack') {
-                const rw = 50;
-                const rh = 110;
+                const rw = 50 / zoom;
+                const rh = 110 / zoom;
                 if (wPos.x >= pos.x - rw/2 && wPos.x <= pos.x + rw/2 && wPos.y >= pos.y - rh/2 && wPos.y <= pos.y + rh/2) {
                     return { array: devices, index: i, type: 'device' };
                 }
@@ -676,8 +676,8 @@
                     }
                 }
                 if (isStackedOnRack) {
-                    const uw = 40;
-                    const uh = 14;
+                    const uw = 40 / zoom;
+                    const uh = 14 / zoom;
                     if (wPos.x >= pos.x - uw/2 && wPos.x <= pos.x + uw/2 && wPos.y >= pos.y - uh/2 && wPos.y <= pos.y + uh/2) {
                         return { array: devices, index: i, type: 'device' };
                     }

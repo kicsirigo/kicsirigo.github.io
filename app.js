@@ -349,6 +349,11 @@ const i18n = {
         if (device.type === 'patchpanel') titleType = 'Patch Panel';
         if (device.type === 'rack') titleType = 'Rack Cabinet';
         
+        const sideIcon = document.querySelector(`.sidebar-item[data-type="${device.type === 'patchpanel' ? 'patch' : device.type}"] svg`);
+        if (sideIcon) {
+            document.getElementById('sw-modal-icon').outerHTML = sideIcon.outerHTML.replace('width:24px; height:24px;', 'width:20px;height:20px').replace('class="icon"', 'id="sw-modal-icon" class="icon"');
+        }
+        
         if (device.type === 'rack') {
             document.getElementById('sw-modal-title').textContent = device.name || titleType;
             document.getElementById('sw-f-port-count').parentElement.style.display = 'none';
@@ -755,6 +760,7 @@ const i18n = {
     btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; redraw(); });
     btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); redraw(); });
     btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); redraw(); });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

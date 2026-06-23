@@ -6,12 +6,6 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 
 ---
 
-## ℹ️ About
-
-**Measurer App** is an interactive, browser-based floorplan tool designed for network engineers, IT professionals, and site planners. It allows users to quickly calibrate floorplan images to real-world scales, estimate cable run distances, plan device placement (such as routers, switches, access points, and rack cabinets), and configure virtual device ports. With client-side local storage and direct file export features, it provides a fast, privacy-respecting workflow for planning physical network deployments.
-
----
-
 ## ✨ Features
 
 - **🌐 Image Support**: Load floorplans as standard image files.

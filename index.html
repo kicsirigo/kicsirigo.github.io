@@ -627,11 +627,11 @@
         const d = devices[index];
         if (!d) return { x: 0, y: 0 };
         
-        let isStackedOnRack = false;
+        let stackedRack = null;
         if (d.type !== 'rack') {
             for (let i = 0; i < devices.length; i++) {
                 if (devices[i].type === 'rack' && Math.abs(devices[i].x - d.x) < 1 && Math.abs(devices[i].y - d.y) < 1) {
-                    isStackedOnRack = true;
+                    stackedRack = devices[i];
                     break;
                 }
             }
@@ -648,8 +648,9 @@
             }
         }
 
-        if (isStackedOnRack) {
-            return { x: d.x, y: d.y + (-40 + stackIndex * 16) / zoom };
+        if (stackedRack) {
+            const rh = stackedRack.height || 110;
+            return { x: d.x, y: d.y - rh/2 + 15 + (stackIndex * 16) };
         } else {
             return { x: d.x, y: d.y + (stackIndex * 20) / zoom };
         }
@@ -662,22 +663,23 @@
             const d = devices[i];
             
             if (d.type === 'rack') {
-                const rw = 50 / zoom;
-                const rh = 110 / zoom;
+                const rw = d.width || 50;
+                const rh = d.height || 110;
                 if (wPos.x >= pos.x - rw/2 && wPos.x <= pos.x + rw/2 && wPos.y >= pos.y - rh/2 && wPos.y <= pos.y + rh/2) {
                     return { array: devices, index: i, type: 'device' };
                 }
             } else {
-                let isStackedOnRack = false;
+                let stackedRack = null;
                 for (let j = 0; j < devices.length; j++) {
                     if (devices[j].type === 'rack' && Math.abs(devices[j].x - d.x) < 1 && Math.abs(devices[j].y - d.y) < 1) {
-                        isStackedOnRack = true;
+                        stackedRack = devices[j];
                         break;
                     }
                 }
-                if (isStackedOnRack) {
-                    const uw = 40 / zoom;
-                    const uh = 14 / zoom;
+                if (stackedRack) {
+                    const rw = stackedRack.width || 50;
+                    const uw = rw - 10;
+                    const uh = 14;
                     if (wPos.x >= pos.x - uw/2 && wPos.x <= pos.x + uw/2 && wPos.y >= pos.y - uh/2 && wPos.y <= pos.y + uh/2) {
                         return { array: devices, index: i, type: 'device' };
                     }
@@ -792,10 +794,25 @@
             document.getElementById('sw-editor-placeholder').style.display = 'none';
             document.getElementById('sw-port-editor').style.display = 'none';
             const rackInfo = document.getElementById('sw-rack-info');
-            rackInfo.textContent = lang === 'hu' ? 'Ez egy rack szekrény. Helyezz el eszközöket rajta a térképen azonos pozícióban.' : 'This is a rack cabinet. Place other devices at the same position to stack them inside.';
+            
+            rackInfo.innerHTML = (lang === 'hu' ? 'Ez egy rack szekrény. Állítsd be a méretét, és helyezz el eszközöket azonos pozícióban a térképen.' : 'This is a rack cabinet. Set its size below and stack other devices inside.') + 
+                '<div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center; align-items: center;">' +
+                '<label style="font-weight:bold; color:var(--text);">Width:</label><input type="number" id="rack-width" value="' + (device.width || 50) + '" style="width:70px; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--panel); color:var(--text);">' +
+                '<label style="font-weight:bold; color:var(--text);">Height:</label><input type="number" id="rack-height" value="' + (device.height || 110) + '" style="width:70px; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--panel); color:var(--text);">' +
+                '</div>';
+                
             rackInfo.style.display = 'block';
             document.getElementById('sw-btn-clear-port').style.display = 'none';
             document.getElementById('switch-modal-overlay').classList.add('open');
+            
+            document.getElementById('rack-width').addEventListener('change', e => { 
+                switchModalDevice.width = parseFloat(e.target.value) || 50; 
+                redraw(); autoSave(); 
+            });
+            document.getElementById('rack-height').addEventListener('change', e => { 
+                switchModalDevice.height = parseFloat(e.target.value) || 110; 
+                redraw(); autoSave(); 
+            });
             return;
         } else {
             document.getElementById('sw-f-port-count').parentElement.style.display = 'flex';
@@ -1309,19 +1326,19 @@
 
                 ctx.globalAlpha = draggedPoint && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
                 
-                let isStackedOnRack = false;
+                let stackedRack = null;
                 if (d.type !== 'rack') {
                     for (let j = 0; j < devices.length; j++) {
                         if (devices[j].type === 'rack' && Math.abs(devices[j].x - d.x) < 1 && Math.abs(devices[j].y - d.y) < 1) {
-                            isStackedOnRack = true;
+                            stackedRack = devices[j];
                             break;
                         }
                     }
                 }
 
                 if (d.type === 'rack') {
-                    const rw = 50 / zoom;
-                    const rh = 110 / zoom;
+                    const rw = d.width || 50;
+                    const rh = d.height || 110;
                     ctx.fillStyle = theme === 'light' ? '#e6e9ef' : '#1e2030';
                     ctx.strokeStyle = '#494d64';
                     ctx.lineWidth = 3 / zoom;
@@ -1338,13 +1355,14 @@
                     ctx.stroke();
 
                     ctx.fillStyle = theme === 'light' ? '#4c4f69' : '#cad3f5';
-                    ctx.font = `bold ${8 / zoom}px 'Segoe UI', sans-serif`;
+                    ctx.font = `bold ${10 / zoom}px 'Segoe UI', sans-serif`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.fillText(shortLabel, 0, -rh/2 - 2/zoom);
-                } else if (isStackedOnRack) {
-                    const uw = 40 / zoom;
-                    const uh = 14 / zoom;
+                } else if (stackedRack) {
+                    const rw = stackedRack.width || 50;
+                    const uw = rw - 10;
+                    const uh = 14;
                     ctx.fillStyle = color;
                     ctx.strokeStyle = theme === 'light' ? '#4c4f69' : '#11111b';
                     ctx.lineWidth = 1.5 / zoom;

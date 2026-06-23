@@ -277,6 +277,7 @@
         </div>
         <div class="group">
             <button id="btn-toggle-layers" title="Toggle Cable/Device Visibility">👁️ Layers</button>
+            <button id="btn-snap-grid" title="Toggle Snap to Grid">🧲 Grid</button>
         </div>
         <div class="group" style="margin-left: auto;">
             <button id="btn-export" class="export-btn" disabled>
@@ -446,7 +447,7 @@
     let img = new Image();
     let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
-    let showLayers = true;
+    let showLayers = true, snapToGrid = false;
 
     let cameraX = 0, cameraY = 0, zoom = 1, isPanning = false, panStartX = 0, panStartY = 0;
     let draggedPoint = null, activePlaceDevice = null, activeContextMenuTarget = null, hasDragged = false;
@@ -765,20 +766,21 @@
         }
 
         if (activePlaceDevice && btn === 0) { 
-            devices.push({ type: activePlaceDevice, x: wPos.x, y: wPos.y, name: null }); 
+            let p = applyGridSnap(wPos);
+            devices.push({ type: activePlaceDevice, x: p.x, y: p.y, name: null }); 
             actionHistory.push({ type: 'device' });
             redraw(); 
             return; 
         }
         
         if (mode === 'scale' && scalePoints.length < 2) { 
-            scalePoints.push(wPos); 
+            scalePoints.push(applyGridSnap(wPos)); 
             actionHistory.push({ type: 'scale' });
             if (scalePoints.length === 2) btnSetScale.disabled = false; 
             redraw(); 
         } 
         else if (mode === 'measure') { 
-            cables[activeCableIndex].push(wPos); 
+            cables[activeCableIndex].push(applyGridSnap(wPos)); 
             actionHistory.push({ type: 'cable', cableIndex: activeCableIndex });
             redraw(); 
         }
@@ -795,7 +797,7 @@
         
         if (draggedPoint) {
             hasDragged = true;
-            let pos = getWorldPos(e);
+            let pos = applyGridSnap(getWorldPos(e));
             if (draggedPoint.type === 'cable') {
                 pos = getSnappedPos(pos);
             }
@@ -842,6 +844,11 @@
     window.addEventListener('touchend', e => { 
         handleEnd(); 
     });
+
+    function applyGridSnap(pos) {
+        if (!snapToGrid) return pos;
+        return { x: Math.round(pos.x / 20) * 20, y: Math.round(pos.y / 20) * 20 };
+    }
 
     // Snapping helper
     function getSnappedPos(pos) {
@@ -947,6 +954,12 @@
         redraw();
     });
 
+    document.getElementById('btn-snap-grid').addEventListener('click', (e) => {
+        snapToGrid = !snapToGrid;
+        e.target.classList.toggle('active', snapToGrid);
+        redraw();
+    });
+
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
         if (!img.src) return;
         zoom = Math.min(zoom * 1.2, 15);
@@ -997,6 +1010,18 @@
         ctx.save(); 
         ctx.translate(cameraX, cameraY); 
         ctx.scale(zoom, zoom);
+
+        if (snapToGrid && !isExport && img.src) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(120, 120, 120, 0.4)';
+            ctx.lineWidth = 1 / zoom;
+            const gridSize = 20;
+            ctx.beginPath();
+            for (let x = 0; x <= img.width; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, img.height); }
+            for (let y = 0; y <= img.height; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(img.width, y); }
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Méretarány vonalak rajzolása
         if (scalePoints.length > 0) {

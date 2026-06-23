@@ -191,8 +191,8 @@
             gap: 8px; margin-bottom: 10px;
         }
         .sw-field-row label { font-size: 0.85em; font-weight: 600; color: var(--subtext); }
-        .sw-field-row input[type=\"text\"],
-        .sw-field-row input[type=\"number\"],
+        .sw-field-row input[type="text"],
+        .sw-field-row input[type="number"],
         .sw-field-row select {
             padding: 7px 10px; border-radius: 6px;
             border: 1px solid var(--border);
@@ -647,22 +647,16 @@
     function buildSwitchFaceplate(device) {
         const portCount = device.portCount || 24;
         const ledRow = document.getElementById('sw-port-leds');
-        const numRow = document.getElementById('sw-port-num-row');
         ledRow.innerHTML = '';
-        numRow.innerHTML = '';
         for (let p = 1; p <= portCount; p++) {
             const led = document.createElement('div');
             led.className = 'sw-port-led';
             led.textContent = p;
             led.dataset.port = p;
             const cfg = device.ports[p];
-            if (cfg && (cfg.label || cfg.vlan || cfg.conn)) led.classList.add('has-config');
+            if (cfg && (cfg.label || cfg.vlan || cfg.conn || cfg.mode !== 'access')) led.classList.add('has-config');
             led.addEventListener('click', () => selectSwPort(p, device));
             ledRow.appendChild(led);
-            const num = document.createElement('div');
-            num.className = 'sw-port-num';
-            num.textContent = p;
-            numRow.appendChild(num);
         }
     }
 

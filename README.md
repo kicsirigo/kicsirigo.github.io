@@ -23,6 +23,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
 - 📄 **PDF Export**: Save your annotated floorplan along with cables, devices, and measurements as a PDF document.
 - ⚡ **Auto-save**: Automatically saves your current workspace in the browser's local storage so you never lose your progress.
+- 📱 **Mobile & Touch Optimization**: Full support for native two-finger pinch-to-zoom / panning, and a custom vertical offset when dragging points so your finger doesn't block your view.
 
 ---
 
@@ -47,6 +48,12 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Press `Ctrl + Z` or click **Undo** to roll back your last action.
    - Toggle **🧲 Grid** to overlay a positioning grid. Hold **Shift** and drag to manually align the grid lines with your floorplan's walls.
 7. **Export**: Click **Export** to download your annotated floorplan as a PDF.
+
+> [!TIP]
+> **Navigation Controls**:
+> - **Desktop**: Scroll the mouse wheel to zoom. Hold **Right-Click** (or the middle mouse button) and drag to pan the floorplan.
+> - **Mobile**: Use a standard two-finger pinch gesture to zoom. Drag with two fingers to pan.
+> - **Precise Moving (Mobile)**: Dragging any device or point on mobile offsets it slightly above your finger so it stays visible while placing.
 
 ---
 

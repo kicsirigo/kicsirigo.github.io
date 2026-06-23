@@ -294,7 +294,7 @@
     <div class="groups-container">
         <div class="group">
             <svg class="icon" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-            <input type="file" id="upload" accept="image/*, application/pdf, application/json">
+            <input type="file" id="upload" accept="image/*, application/pdf, application/json, .plan">
         </div>
         <div class="group">
             <button id="btn-scale" disabled>
@@ -329,9 +329,13 @@
             <button id="btn-snap-grid" title="Toggle Snap to Grid">🧲 Grid</button>
         </div>
         <div class="group" style="margin-left: auto;">
+            <button id="btn-export-plan" class="export-btn" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="btnExportPlan">Save .plan</span>
+            </button>
             <button id="btn-export" class="export-btn" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                <span data-i18n="btnExport">Export</span>
+                <span data-i18n="btnExport">Export PDF</span>
             </button>
         </div>
     </div>
@@ -445,7 +449,7 @@
         en: {
             help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export",
+            btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -466,7 +470,7 @@
         hu: {
             help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Export",
+            btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -493,7 +497,7 @@
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
     const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable');
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
-    const btnExport = document.getElementById('btn-export'), status = document.getElementById('status');
+    const btnExport = document.getElementById('btn-export'), btnExportPlan = document.getElementById('btn-export-plan'), status = document.getElementById('status');
     const measurements = document.getElementById('measurements'), canvasContainer = document.getElementById('canvas-container');
     const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
     const contextMenu = document.getElementById('context-menu');
@@ -560,7 +564,7 @@
         gridOffsetX = data.gridOffsetX || 0;
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
-        btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+        btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
         btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
@@ -574,7 +578,7 @@
     document.getElementById('upload').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        if (file.name.endsWith('.json')) {
+        if (file.name.endsWith('.json') || file.name.endsWith('.plan')) {
             reader.onload = ev => {
                 try {
                     const data = JSON.parse(ev.target.result);
@@ -601,7 +605,7 @@
             scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
-            btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+            btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
             status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
     }
@@ -1192,6 +1196,20 @@
     });
 
     btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
+
+    btnExportPlan.addEventListener('click', () => {
+        if (!img.src) return;
+        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
+        if (img.src.length < 1500000) data.imgSrc = img.src;
+        const jsonStr = JSON.stringify(data);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "workspace.plan";
+        a.click();
+        URL.revokeObjectURL(url);
+    });
 
     btnExport.addEventListener('click', () => {
         if (!img.src) return;

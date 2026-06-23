@@ -91,9 +91,9 @@
         #status { color: var(--danger); font-size: 1.05em; }
         #measurements { color: var(--success); font-size: 1.05em; text-align: right; }
         
-        /* Célkereszt kényszerítése a canvas-re */
-        #canvas-container { flex-grow: 1; position: relative; background: var(--canvas-bg); cursor: none !important; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: none !important; }
+        /* ponytail: Use native crosshair cursor */
+        #canvas-container { flex-grow: 1; position: relative; background: var(--canvas-bg); cursor: crosshair; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
         input[type="file"] { border: none; background: transparent; padding: 0; color: var(--text); width: 160px; }
 
         /* CONTEXT MENU */
@@ -110,26 +110,6 @@
         .ctx-item:hover { background: var(--bg); }
         .ctx-item.danger { color: var(--danger); }
         .ctx-item.danger svg { stroke: var(--danger); }
-
-        /* Egyedi Prompt ablak stílusai (Catppuccin témához) */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.4); display: flex; justify-content: center;
-            align-items: center; z-index: 10000;
-        }
-        .modal-content {
-            background: var(--panel); border: 1px solid var(--border);
-            padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px var(--shadow);
-            width: 320px; text-align: center; display: flex; flex-direction: column; gap: 15px;
-        }
-        .modal-content h3 { margin: 0; color: var(--text); font-size: 1.1rem; }
-        .modal-content input {
-            background: var(--bg); border: 1px solid var(--border); color: var(--text);
-            padding: 10px; border-radius: 6px; font-size: 1rem; outline: none; text-align: center;
-        }
-        .modal-content input:focus { border-color: var(--accent); }
-        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
-        .modal-buttons button { padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body data-theme="light">
@@ -201,19 +181,19 @@
 <div id="workspace">
     <div id="sidebar">
         <div class="sidebar-title" data-i18n="sideTitle">Devices</div>
-        <div class="sidebar-item" draggable="true" data-type="router">
+        <div class="sidebar-item" data-type="router">
             <svg class="icon" viewBox="0 0 24 24" style="width:24px; height:24px;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line><circle cx="6" cy="15" r="1"></circle><circle cx="12" cy="15" r="1"></circle><circle cx="18" cy="15" r="1"></circle></svg>
             <span>Router</span>
         </div>
-        <div class="sidebar-item" draggable="true" data-type="switch">
+        <div class="sidebar-item" data-type="switch">
             <svg class="icon" viewBox="0 0 24 24" style="width:24px; height:24px;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="8" x2="6" y2="16"></line><line x1="10" y1="8" x2="10" y2="16"></line><line x1="14" y1="8" x2="14" y2="16"></line><line x1="18" y1="8" x2="18" y2="16"></line></svg>
             <span>Switch</span>
         </div>
-        <div class="sidebar-item" draggable="true" data-type="patch">
+        <div class="sidebar-item" data-type="patch">
             <svg class="icon" viewBox="0 0 24 24" style="width:24px; height:24px;"><rect x="2" y="7" width="20" height="10" rx="1"></rect><circle cx="6" cy="12" r="1"></circle><circle cx="10" cy="12" r="1"></circle><circle cx="14" cy="12" r="1"></circle><circle cx="18" cy="12" r="1"></circle></svg>
             <span>Patch</span>
         </div>
-        <div class="sidebar-item" draggable="true" data-type="ap">
+        <div class="sidebar-item" data-type="ap">
             <svg class="icon" viewBox="0 0 24 24" style="width:24px; height:24px;"><circle cx="12" cy="12" r="2"></circle><path d="M12 2a10 10 0 0 1 10 10"></path><path d="M12 6a6 6 0 0 1 6 6"></path><path d="M12 18a6 6 0 0 1-6-6"></path><path d="M12 22a10 10 0 0 1-10-10"></path></svg>
             <span>AP</span>
         </div>
@@ -224,16 +204,7 @@
     </div>
 </div>
 
-<div id="custom-prompt-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3 id="prompt-modal-title">Méretarány megadása</h3>
-            <input type="text" id="prompt-modal-input" placeholder="Pl. 12.34">
-            <div class="modal-buttons">
-                <button id="prompt-modal-cancel" class="btn btn-secondary">Mégse</button>
-                <button id="prompt-modal-submit" class="btn btn-danger">Mentés</button>
-            </div>
-        </div>
-    </div>
+
 
     <div id="context-menu">
         <div class="ctx-item" id="ctx-rename">
@@ -326,8 +297,7 @@
     let cameraX = 0, cameraY = 0, zoom = 1, isPanning = false, panStartX = 0, panStartY = 0;
     let draggedPoint = null, activePlaceDevice = null, activeContextMenuTarget = null, hasDragged = false;
     
-    // Egér pozíciója a képernyőn a célkereszthez
-    let mouseCanvasX = 0, mouseCanvasY = 0, showCrosshair = false;
+    // ponytail: Removed custom crosshair variables
 
     // --- TÉMA ÉS NYELV ---
     document.getElementById('btn-theme').addEventListener('click', () => {
@@ -345,24 +315,8 @@
     }
     document.getElementById('lang-select').addEventListener('change', e => { lang = e.target.value; updateLanguageUI(); });
 
-    // --- ESZKÖZÖK OLDALSÁV (Drag & Drop kis pöttyel) ---
+    // ponytail: Removed drag-and-drop code, using click-to-place exclusively
     document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.addEventListener('dragstart', (e) => {
-            if(!img.src) { e.preventDefault(); return; }
-            e.dataTransfer.setData('device-type', item.dataset.type);
-            
-            const dragIcon = document.createElement('div');
-            dragIcon.style.width = '14px';
-            dragIcon.style.height = '14px';
-            dragIcon.style.background = deviceColors[item.dataset.type] || 'var(--accent)';
-            dragIcon.style.border = '2px solid white';
-            dragIcon.style.borderRadius = '50%';
-            dragIcon.style.position = 'absolute';
-            dragIcon.style.top = '-1000px';
-            document.body.appendChild(dragIcon);
-            e.dataTransfer.setDragImage(dragIcon, 7, 7);
-            setTimeout(() => document.body.removeChild(dragIcon), 0);
-        });
         item.addEventListener('click', () => {
             if(!img.src) return;
             if (activePlaceDevice === item.dataset.type) {
@@ -374,16 +328,6 @@
                 status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
-    });
-
-    canvasContainer.addEventListener('dragover', e => e.preventDefault());
-    canvasContainer.addEventListener('drop', e => {
-        e.preventDefault(); const type = e.dataTransfer.getData('device-type');
-        if (!type || !img.src) return;
-        const pos = getWorldPos(e);
-        devices.push({ type, x: pos.x, y: pos.y, name: null });
-        actionHistory.push({ type: 'device' });
-        redraw();
     });
 
     // --- FÁJL BETÖLTÉS ÉS GOMBOK ---
@@ -546,13 +490,9 @@
         }
     }
 
+    // ponytail: Removed custom crosshair tracking and simplified touch events
     function handleMove(e, isTouch) {
         if (!img.src) return;
-        
-        const r = canvas.getBoundingClientRect();
-        mouseCanvasX = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - r.left;
-        mouseCanvasY = (e.clientY || (e.touches && e.touches[0].clientY) || 0) - r.top;
-        showCrosshair = true;
 
         if (isPanning) { 
             hasDragged = true;
@@ -578,57 +518,29 @@
     canvasContainer.addEventListener('mousedown', e => handleStart(e, false));
     canvasContainer.addEventListener('mousemove', e => handleMove(e, false));
     window.addEventListener('mouseup', handleEnd);
-    
-    canvasContainer.addEventListener('mouseenter', () => { if(img.src) showCrosshair = true; redraw(); });
-    canvasContainer.addEventListener('mouseleave', () => { showCrosshair = false; redraw(); });
 
-    canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) { showCrosshair = true; handleStart(e, true); } }, {passive: true});
+    canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) handleStart(e, true); }, {passive: true});
     canvasContainer.addEventListener('touchmove', e => { if(e.touches.length === 1) handleMove(e, true); }, {passive: true});
-    window.addEventListener('touchend', () => { showCrosshair = false; handleEnd(); });
+    window.addEventListener('touchend', () => { handleEnd(); });
 
     // Gombok logika & UNDO
-    // --- ÚJ, CATPPUCCIN MODAL PROMPT LOGIKA ---
+    // ponytail: Replaced custom scale prompt modal with native window.prompt()
     btnSetScale.addEventListener('click', () => {
         if (scalePoints.length !== 2) return;
-        
-        const modal = document.getElementById('custom-prompt-modal');
-        const input = document.getElementById('prompt-modal-input');
-        const title = document.getElementById('prompt-modal-title');
-        
-        title.innerText = t('promptMeter');
-        input.value = '';
-        modal.style.display = 'flex';
-        setTimeout(() => input.focus(), 50);
-
-        const cleanUp = () => {
-            modal.style.display = 'none';
-            document.getElementById('prompt-modal-submit').onclick = null;
-            document.getElementById('prompt-modal-cancel').onclick = null;
-            input.onkeydown = null;
-        };
-
-        const submitValue = () => {
-            const m = input.value;
-            if (m && !isNaN(m.replace(',', '.'))) {
-                pixelsPerMeter = Math.hypot(scalePoints[1].x - scalePoints[0].x, scalePoints[1].y - scalePoints[0].y) / parseFloat(m.replace(',', '.'));
+        const val = prompt(t('promptMeter'));
+        if (val) {
+            const parsed = parseFloat(val.replace(',', '.'));
+            if (!isNaN(parsed) && parsed > 0) {
+                pixelsPerMeter = Math.hypot(scalePoints[1].x - scalePoints[0].x, scalePoints[1].y - scalePoints[0].y) / parsed;
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
                 btnMeasure.disabled = btnNewCable.disabled = btnUndo.disabled = btnClear.disabled = false;
                 redraw();
-                cleanUp();
             } else {
                 alert(t('statScaleInvalid'));
             }
-        };
-
-        document.getElementById('prompt-modal-submit').onclick = submitValue;
-        document.getElementById('prompt-modal-cancel').onclick = cleanUp;
-        
-        input.onkeydown = (e) => {
-            if (e.key === 'Enter') submitValue();
-            if (e.key === 'Escape') cleanUp();
-        };
+        }
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
@@ -696,64 +608,7 @@
         const isExport = (mode === 'export');
 
 
-        // 1. LÉPÉS: Precíziós kurzor rajzolása (Klasszikus stílus univerzális kontraszttal és dinamikus körszínnel)
-        if (showCrosshair && !isExport) {
-            ctx.save();
-            
-            const cx = mouseCanvasX;
-            const cy = mouseCanvasY;
-
-            // --- INTELIGENS HOVER ÉRZÉKELÉS ---
-            const wMouseX = (cx - cameraX) / zoom;
-            const wMouseY = (cy - cameraY) / zoom;
-            const hitRadius = 18 / zoom;
-            let isOverPoint = false;
-
-            for (let i = 0; i < devices.length; i++) { if (Math.hypot(devices[i].x - wMouseX, devices[i].y - wMouseY) < hitRadius) { isOverPoint = true; break; } }
-            if (!isOverPoint) { for (let i = 0; i < scalePoints.length; i++) { if (Math.hypot(scalePoints[i].x - wMouseX, scalePoints[i].y - wMouseY) < hitRadius) { isOverPoint = true; break; } } }
-            if (!isOverPoint) { for (let c = 0; c < cables.length; c++) { for (let i = 0; i < cables[c].length; i++) { if (Math.hypot(cables[c][i].x - wMouseX, cables[c][i].y - wMouseY) < hitRadius) { isOverPoint = true; break; } } } }
-
-            // Áttetszőség, ha pont felett vagyunk
-            ctx.globalAlpha = isOverPoint ? 0.3 : 1.0;
-
-            // A kör csak akkor jelenik meg, ha Méretarány (scale) vagy Kábelezés (measure) módban vagyunk
-            if (mode === 'scale' || mode === 'measure') {
-                let circleColor = theme === 'light' ? '#1e66f5' : '#8aadf4'; // Alapértelmezett kék (pl. scale módhoz)
-                
-                if (mode === 'measure') {
-                    circleColor = cableColors[activeCableIndex % cableColors.length];
-                }
-
-                // 1. Kör (gyűrű) rajzolása
-                ctx.strokeStyle = circleColor; 
-                ctx.lineWidth = 2.5;
-                ctx.setLineDash([]); 
-                ctx.beginPath();
-                ctx.arc(cx, cy, 10, 0, 2 * Math.PI); 
-                ctx.stroke();
-            }
-
-            // 2. KLASSZIKUS KERESZT - UNIVERZÁLIS KOPP-KONTRAST (Minden háttéren látszik)
-            // Először rajzolunk egy kicsit vastagabb fehér keresztet háttérnek...
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3.5;
-            
-            ctx.beginPath();
-            ctx.moveTo(cx - 15, cy); ctx.lineTo(cx + 15, cy);
-            ctx.moveTo(cx, cy - 15); ctx.lineTo(cx, cy + 15);
-            ctx.stroke();
-            
-            // ...majd pontosan a közepére rásütünk egy vékony fekete keresztet!
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1.5;
-            
-            ctx.beginPath();
-            ctx.moveTo(cx - 15, cy); ctx.lineTo(cx + 15, cy);
-            ctx.moveTo(cx, cy - 15); ctx.lineTo(cx, cy + 15);
-            ctx.stroke();
-            
-            ctx.restore();
-        }
+        // ponytail: Removed custom crosshair rendering, relying on native CSS cursor
 
         // 2. LÉPÉS: Kamera transzformáció megnyitása a térbeli objektumoknak (vonalak, pontok)
         ctx.save(); 

@@ -17,8 +17,9 @@ Vibecoded with Gemini & refined using minimalist code design principles.
   - 🌸 **Patch Panel (PP)**
   - 🟡 **Access Point (AP)**
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
-- **🌍 Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
-- **💾 PNG Export**: Save your annotated floorplan along with cables, devices, and measurements as a PNG image.
+- 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
+- 💾 **PNG Export**: Save your annotated floorplan along with cables, devices, and measurements as a PNG image.
+- ⚡ **Auto-save**: Automatically saves your current workspace in the browser's local storage so you never lose your progress.
 
 ---
 

@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Measurer app</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         /* Catppuccin Témák */
         :root {
@@ -294,7 +293,7 @@
     <div class="groups-container">
         <div class="group">
             <svg class="icon" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-            <input type="file" id="upload" accept="image/*, application/pdf, application/json, .plan">
+            <input type="file" id="upload" accept="image/*, application/json, .plan">
         </div>
         <div class="group">
             <button id="btn-scale" disabled>
@@ -335,7 +334,7 @@
             </button>
             <button id="btn-export" class="export-btn" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                <span data-i18n="btnExport">Export PDF</span>
+                <span data-i18n="btnExport">Export PNG</span>
             </button>
         </div>
     </div>
@@ -443,13 +442,11 @@
 </div>
 
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
     const i18n = {
         en: {
             help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
+            btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PNG", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -470,7 +467,7 @@
         hu: {
             help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
+            btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Kép Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -586,14 +583,6 @@
                 } catch (err) { alert('Error loading JSON data'); }
             };
             reader.readAsText(file);
-        } else if (file.type === 'application/pdf') {
-            reader.onload = event => {
-                pdfjsLib.getDocument(new Uint8Array(event.target.result)).promise.then(pdf => pdf.getPage(1)).then(page => {
-                    const vp = page.getViewport({scale: 2.0}), tc = document.createElement('canvas'), tctx = tc.getContext('2d');
-                    tc.width = vp.width; tc.height = vp.height;
-                    page.render({canvasContext: tctx, viewport: vp}).promise.then(() => loadImageData(tc.toDataURL('image/png')));
-                });
-            }; reader.readAsArrayBuffer(file);
         } else {
             reader.onload = ev => loadImageData(ev.target.result); reader.readAsDataURL(file);
         }
@@ -1217,24 +1206,10 @@
         mode = 'export';
         redraw();
         
-        try {
-            const { jsPDF } = window.jspdf;
-            const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
-            const pdf = new jsPDF({
-                orientation: orientation,
-                unit: 'px',
-                format: [canvas.width, canvas.height]
-            });
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-            pdf.save('floorplan_measured.pdf');
-        } catch (e) {
-            console.error("PDF export failed, falling back to PNG", e);
-            const link = document.createElement('a');
-            link.download = 'floorplan_measured.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
+        const link = document.createElement('a');
+        link.download = 'floorplan_measured.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
         
         mode = prevMode;
         redraw();

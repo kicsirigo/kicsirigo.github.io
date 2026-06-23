@@ -135,7 +135,7 @@
     <div class="groups-container">
         <div class="group">
             <svg class="icon" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-            <input type="file" id="upload" accept="image/*, application/pdf">
+            <input type="file" id="upload" accept="image/*, application/pdf, application/json">
         </div>
         <div class="group">
             <button id="btn-scale" disabled>
@@ -165,7 +165,16 @@
                 <span data-i18n="btnClear">Clear</span>
             </button>
         </div>
+        <div class="group">
+            <span style="font-size: 0.85em; font-weight: bold;">Slack (m):</span>
+            <input type="number" id="input-slack" min="0" step="0.5" value="2.0" style="width: 55px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px; text-align: center;">
+            <button id="btn-toggle-layers" title="Toggle Cable/Device Visibility">👁️ Layers</button>
+        </div>
         <div class="group" style="margin-left: auto;">
+            <button id="btn-export-json" class="export-btn" disabled>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>Save JSON</span>
+            </button>
             <button id="btn-export" class="export-btn" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 <span data-i18n="btnExport">Export</span>
@@ -201,6 +210,11 @@
     
     <div id="canvas-container">
         <canvas id="canvas"></canvas>
+        <div id="zoom-controls" style="position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 5px; z-index: 100;">
+            <button id="btn-zoom-in" title="Zoom In" style="padding: 5px 10px; font-weight: bold;">+</button>
+            <button id="btn-zoom-out" title="Zoom Out" style="padding: 5px 10px; font-weight: bold;">-</button>
+            <button id="btn-zoom-reset" title="Reset View" style="padding: 5px 10px; font-weight: bold;">⟲</button>
+        </div>
     </div>
 </div>
 
@@ -293,6 +307,8 @@
     let img = new Image(), originalImageWidth = 0, originalImageHeight = 0;
     let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
+    let cableSlack = 2.0, showLayers = true;
+    const btnExportJson = document.getElementById('btn-export-json');
 
     let cameraX = 0, cameraY = 0, zoom = 1, isPanning = false, panStartX = 0, panStartY = 0;
     let draggedPoint = null, activePlaceDevice = null, activeContextMenuTarget = null, hasDragged = false;
@@ -337,7 +353,37 @@
     document.getElementById('upload').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        if (file.type === 'application/pdf') {
+        if (file.name.endsWith('.json')) {
+            reader.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (data.imgSrc) {
+                        img.onload = () => {
+                            originalImageWidth = img.width; originalImageHeight = img.height; resizeCanvas();
+                            zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
+                            cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
+                            cameraY = (data.cameraY !== undefined) ? data.cameraY : (canvas.height - img.height * zoom) / 2;
+                            scalePoints = data.scalePoints || [];
+                            cables = data.cables || [[]];
+                            devices = data.devices || [];
+                            pixelsPerMeter = data.pixelsPerMeter || null;
+                            cableSlack = data.cableSlack || 2.0;
+                            document.getElementById('input-slack').value = cableSlack;
+                            activeCableIndex = cables.length - 1;
+                            btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+                            btnExportJson.disabled = false;
+                            btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
+                            status.innerText = t('statLoaded');
+                            redraw();
+                        };
+                        img.src = data.imgSrc;
+                    }
+                } catch (err) {
+                    alert('Error loading JSON data');
+                }
+            };
+            reader.readAsText(file);
+        } else if (file.type === 'application/pdf') {
             reader.onload = event => {
                 pdfjsLib.getDocument(new Uint8Array(event.target.result)).promise.then(pdf => pdf.getPage(1)).then(page => {
                     const vp = page.getViewport({scale: 2.0}), tc = document.createElement('canvas'), tctx = tc.getContext('2d');
@@ -356,7 +402,9 @@
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
-            btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false; status.innerText = t('statLoaded'); redraw();
+            btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+            btnExportJson.disabled = false;
+            status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
     }
 
@@ -419,7 +467,7 @@
         if (activeContextMenuTarget && activeContextMenuTarget.type === 'device') {
             const d = devices[activeContextMenuTarget.index];
             const newName = prompt(t('promptRename'), d.name || deviceShortnames[d.type]);
-            if (newName !== null) { d.name = newName.trim() === "" ? null : newName; redraw(); }
+            if (newName !== null) { d.name = newName.trim() === "" ? null : newName; redraw(); autoSave(); }
         }
     });
 
@@ -428,6 +476,7 @@
         if (activeContextMenuTarget && activeContextMenuTarget.type === 'device') { 
             devices.splice(activeContextMenuTarget.index, 1); 
             redraw(); 
+            autoSave();
         }
     });
 
@@ -441,6 +490,7 @@
                 pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
             }
             redraw();
+            autoSave();
         }
     });
 
@@ -501,7 +551,10 @@
         
         if (draggedPoint) {
             hasDragged = true;
-            const pos = getWorldPos(e);
+            let pos = getWorldPos(e);
+            if (draggedPoint.type === 'cable') {
+                pos = getSnappedPos(pos);
+            }
             draggedPoint.array[draggedPoint.index].x = pos.x; 
             draggedPoint.array[draggedPoint.index].y = pos.y;
             if (draggedPoint.type === 'scale' && pixelsPerMeter) { pixelsPerMeter = null; mode = 'scale'; btnScale.classList.add('active'); btnSetScale.disabled = false; }
@@ -511,6 +564,7 @@
 
     function handleEnd() { 
         isPanning = false; 
+        if (draggedPoint) autoSave();
         draggedPoint = null; 
         redraw(); 
     }
@@ -522,6 +576,30 @@
     canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) handleStart(e, true); }, {passive: true});
     canvasContainer.addEventListener('touchmove', e => { if(e.touches.length === 1) handleMove(e, true); }, {passive: true});
     window.addEventListener('touchend', () => { handleEnd(); });
+
+    // Snapping helper
+    function getSnappedPos(pos) {
+        const snapDist = 15 / zoom;
+        for (let d of devices) {
+            if (Math.hypot(d.x - pos.x, d.y - pos.y) < snapDist) {
+                return { x: d.x, y: d.y };
+            }
+        }
+        return pos;
+    }
+
+    // Auto-save logic
+    function autoSave() {
+        if (!img.src) return;
+        const data = { scalePoints, cables, devices, pixelsPerMeter, cableSlack, zoom, cameraX, cameraY };
+        if (img.src && img.src.length < 1500000) data.imgSrc = img.src;
+        try {
+            localStorage.setItem('measurer_workspace', JSON.stringify(data));
+        } catch (e) {
+            delete data.imgSrc;
+            localStorage.setItem('measurer_workspace', JSON.stringify(data));
+        }
+    }
 
     // Gombok logika & UNDO
     // ponytail: Replaced custom scale prompt modal with native window.prompt()
@@ -537,6 +615,7 @@
                 mode = 'none';
                 btnMeasure.disabled = btnNewCable.disabled = btnUndo.disabled = btnClear.disabled = false;
                 redraw();
+                autoSave();
             } else {
                 alert(t('statScaleInvalid'));
             }
@@ -547,7 +626,7 @@
 // --- GOMBOK HOZZÁRENDELÉSEI ---
     btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; status.innerText = t('statScale'); redraw(); });
     btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); status.innerText = t('statMeasure'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].length > 0) { cables.push([]); activeCableIndex = cables.length - 1; status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); } });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].length > 0) { cables.push([]); activeCableIndex = cables.length - 1; status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 
@@ -567,10 +646,11 @@
                 }
             }
             redraw(); 
+            autoSave();
         }
     });
 
-    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; redraw(); } });
+    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; redraw(); autoSave(); } });
 
     btnExport.addEventListener('click', () => {
         if (!img.src) return;
@@ -585,6 +665,55 @@
         
         mode = prevMode;
         redraw();
+    });
+
+    btnExportJson.addEventListener('click', () => {
+        if (!img.src) return;
+        const data = { scalePoints, cables, devices, pixelsPerMeter, cableSlack, zoom, cameraX, cameraY, imgSrc: img.src };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'floorplan_project.json';
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('input-slack').addEventListener('input', e => {
+        const v = parseFloat(e.target.value);
+        if (!isNaN(v) && v >= 0) {
+            cableSlack = v;
+            redraw();
+            autoSave();
+        }
+    });
+
+    document.getElementById('btn-toggle-layers').addEventListener('click', () => {
+        showLayers = !showLayers;
+        redraw();
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+        if (!img.src) return;
+        zoom = Math.min(zoom * 1.2, 15);
+        redraw();
+        autoSave();
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+        if (!img.src) return;
+        zoom = Math.max(zoom * 0.8, 0.05);
+        redraw();
+        autoSave();
+    });
+
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+        if (!img.src) return;
+        zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
+        cameraX = (canvas.width - img.width * zoom) / 2;
+        cameraY = (canvas.height - img.height * zoom) / 2;
+        redraw();
+        autoSave();
     });
 
     // --- RAJZOLÓ MOTOR ---
@@ -622,46 +751,54 @@
             scalePoints.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'scale' && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, 8 / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
         }
 
-        // Kábelek és pontok rajzolása
+        // ponytail: Added showLayers toggle check to support layer visibility
+        if (showLayers) {
+            // Kábelek és pontok rajzolása
+            cables.forEach((cable, cIndex) => {
+                if (cable.length === 0) return;
+                ctx.strokeStyle = cableColors[cIndex % cableColors.length]; ctx.lineWidth = (cIndex === activeCableIndex ? 5 : 3) / zoom; ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.moveTo(cable[0].x, cable[0].y);
+                for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y); ctx.stroke();
+                cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+            });
+
+            // Eszközök rajzolása
+            devices.forEach((d, i) => {
+                ctx.save(); ctx.translate(d.x, d.y);
+                let color = deviceColors[d.type] || '#8aadf4';
+                const shortLabel = d.name || deviceShortnames[d.type] || 'DEV';
+                const radius = 15 / zoom;
+
+                ctx.globalAlpha = draggedPoint && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
+                
+                ctx.fillStyle = color;
+                ctx.strokeStyle = theme === 'light' ? '#ffffff' : '#11111b';
+                ctx.lineWidth = 2.5 / zoom;
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                ctx.fill(); 
+                ctx.stroke();
+
+                ctx.fillStyle = '#11111b'; 
+                ctx.font = `bold ${11 / zoom}px 'Segoe UI', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(shortLabel, 0, 0.5 / zoom);
+
+                ctx.restore();
+            });
+        }
+
+        // Calculate lengths always to keep status up-to-date
         let totalMeters = 0;
         cables.forEach((cable, cIndex) => {
-            if (cable.length === 0) return;
-            ctx.strokeStyle = cableColors[cIndex % cableColors.length]; ctx.lineWidth = (cIndex === activeCableIndex ? 5 : 3) / zoom; ctx.fillStyle = 'white';
-            ctx.beginPath(); ctx.moveTo(cable[0].x, cable[0].y);
-            for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y); ctx.stroke();
-            cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
-            if(pixelsPerMeter && cable.length > 1) { for (let i = 1; i < cable.length; i++) totalMeters += Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter; }
+            if(pixelsPerMeter && cable.length > 1) { 
+                let segmentLen = 0;
+                for (let i = 1; i < cable.length; i++) segmentLen += Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter; 
+                totalMeters += segmentLen + cableSlack;
+            }
         });
-
-        // Eszközök rajzolása
-        devices.forEach((d, i) => {
-            ctx.save(); ctx.translate(d.x, d.y);
-            let color = deviceColors[d.type] || '#8aadf4';
-            const shortLabel = d.name || deviceShortnames[d.type] || 'DEV';
-            const radius = 15 / zoom;
-
-            ctx.globalAlpha = draggedPoint && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
-            
-            ctx.fillStyle = color;
-            ctx.strokeStyle = theme === 'light' ? '#ffffff' : '#11111b';
-            ctx.lineWidth = 2.5 / zoom;
-            
-            ctx.beginPath();
-            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-            ctx.fill(); 
-            ctx.stroke();
-
-            ctx.fillStyle = '#11111b'; 
-            ctx.font = `bold ${11 / zoom}px 'Segoe UI', sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(shortLabel, 0, 0.5 / zoom);
-
-            ctx.restore();
-        });
-
-        // Bezárjuk a kamera transzformációt
-        ctx.restore();
 
         // 3. LÉPÉS: Méterek kiíratása a képernyőre
         if (pixelsPerMeter && !isExport) {
@@ -670,12 +807,16 @@
                 for (let i = 1; i < cables[activeCableIndex].length; i++) {
                     activeLen += Math.hypot(cables[activeCableIndex][i].x - cables[activeCableIndex][i-1].x, cables[activeCableIndex][i].y - cables[activeCableIndex][i-1].y) / pixelsPerMeter; 
                 }
+                activeLen += cableSlack;
             }
             measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success);">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span>`;
         } else {
             measurements.innerHTML = '';
         }
     }
+
+    // Call load on startup
+    loadSavedWorkspace();
     updateLanguageUI();
 </script>
 </body>

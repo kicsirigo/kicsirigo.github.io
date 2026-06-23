@@ -16,7 +16,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 
 - **🌐 Image Support**: Load floorplans as standard image files.
 - **📏 Calibration & Scaling**: Calibrate the drawing canvas by selecting a line of known distance (e.g., a wall) and entering its real-world length.
-- **🔌 Cable Estimation**: Draw multiple independent cable runs and get real-time length estimation based on your calibrated scale.
+- **🔌 Cable Estimation & Types**: Draw multiple independent cable runs and get real-time length estimation. Choose from distinct **Cable Types** (Cat5e, Cat6, Cat6a, Fiber, Power) which are color-coded, and see your total lengths automatically aggregated by type!
 - **🖥️ Device Placement**: Drag-free click-to-place network components:
   - 🟣 **Router (RT)**
   - 🟢 **Switch (SW)**
@@ -44,8 +44,9 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Click on the start and end point of a known distance (like a door width or wall line).
    - Adjust the points if needed, click **Confirm**, and enter the real-world distance in meters.
 3. **Draft Cables**:
+   - Select your desired **Cable Type** (e.g., Cat6, Fiber) from the dropdown in the top toolbar.
    - Click **Draw Cables** and tap/click along the floorplan to measure paths.
-   - Use **New Cable** to start a separate segment with different colors.
+   - Use **New Cable** to start a separate segment with your newly selected type and color.
 4. **Place Devices**:
    - Select a device from the sidebar (Router, Switch, Patch Panel, AP, or PC).
    - Click anywhere on the map to place the device. Active device selection will show a visual pulse.

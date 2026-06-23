@@ -506,6 +506,15 @@ const i18n = {
             return;
         }
 
+        if (mode === 'connect') {
+            if (hov && hov.type === 'device') {
+                showPortPopup(hov.index, wPos.x, wPos.y);
+            } else {
+                hidePortPopup();
+            }
+            return;
+        }
+
         if (btn === 2 || btn === 1 || (btn === 0 && e.ctrlKey) || (!hov && mode === 'none' && !activePlaceDevice)) {
             isPanning = true; panStartX = (isTouch ? e.touches[0].clientX : e.clientX) - cameraX; panStartY = (isTouch ? e.touches[0].clientY : e.clientY) - cameraY;
             return;

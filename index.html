@@ -110,8 +110,6 @@
         .ctx-item:hover { background: var(--bg); }
         .ctx-item.danger { color: var(--danger); }
         .ctx-item.danger svg { stroke: var(--danger); }
-        .ctx-item.danger { color: var(--danger); }
-        .ctx-item.danger svg { stroke: var(--danger); }
 
         /* Egyedi Prompt ablak stílusai (Catppuccin témához) */
         .modal-overlay {
@@ -284,13 +282,13 @@
         },
         hu: {
             help: "Nagyítás: Egérgörgő | Mozgatás: Jobb klikk / Érintés | Menü: Jobb klikk",
-            btnScale: "Méretarány", btnSetScale: "Véglegesít", btnMeasure: "Kábelezés",
+            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Export",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
             statScale: "Kattints a fal két végére! (A pontok húzhatók)",
-            statSetScale: "Igazítsd a helyére, geopolitical a 'Véglegesít' gombra!",
+            statSetScale: "Igazítsd a helyére, majd kattints a 'Véglegesítés' gombra!",
             statScaleSaved: "Méretarány mentve! Kattints a 'Kábelezés' gombra vagy húzz be eszközöket.",
             statScaleInvalid: "Érvénytelen érték. Próbáld újra!",
             statMeasure: "Kattints a kábel útján! Új kábelhez: 'Új kábel'.",
@@ -662,10 +660,29 @@
 
     btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; redraw(); } });
 
+    btnExport.addEventListener('click', () => {
+        if (!img.src) return;
+        const prevMode = mode;
+        mode = 'export';
+        redraw();
+        
+        const link = document.createElement('a');
+        link.download = 'floorplan_measured.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        mode = prevMode;
+        redraw();
+    });
+
     // --- RAJZOLÓ MOTOR ---
     function redraw() {
         if (!canvas) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const canvasBgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = canvasBgColor || '#ccd0da';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Alaprajz (kép) kirajzolása
         if (img.src) {

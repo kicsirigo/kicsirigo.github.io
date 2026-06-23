@@ -516,7 +516,10 @@ const i18n = {
                 const hovPos = hov.type === 'device' ? getDeviceDrawPos(hov.index) : hov.array[hov.index];
                 dragOffsetX = hovPos.x - wPos.x;
                 dragOffsetY = hovPos.y - wPos.y;
-                if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; // status.innerText = t('statEditCable', activeCableIndex + 1); }
+                if (hov.type === 'cable') { 
+                    activeCableIndex = hov.cableIndex; 
+                    // status.innerText = t('statEditCable', activeCableIndex + 1); 
+                }
                 redraw();
                 return;
             }
@@ -749,9 +752,9 @@ const i18n = {
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
 // --- GOMBOK HOZZÁRENDELÉSEI ---
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; // status.innerText = t('statScale'); redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); // status.innerText = t('statMeasure'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; // status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; redraw(); autoSave(); } });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

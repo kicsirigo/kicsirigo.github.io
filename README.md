@@ -17,8 +17,9 @@ Vibecoded with Gemini & refined using minimalist code design principles.
   - 🌸 **Patch Panel (PP)**
   - 🟡 **Access Point (AP)**
   - 🔵 **Client PC (PC)**
+  - 🗄️ **Rack Cabinet (RACK)** (A grey metal chassis cabinet for housing rackmountable hardware)
 - **⚡ Device Port Customization**: Click on any placed device to open an interactive faceplate configuration. You can dynamically adjust the number of ports (from 1 to 128) and configure individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
-- **🏢 Rack Stacking (Overlapping Devices)**: Devices placed on top of each other (e.g. snapped to the same grid coordinate) automatically visual-stack vertically like a server rack, allowing clean rack layouts while keeping each device fully clickable and configurable.
+- **🏢 Rack Cabinets & Visual Mounting**: Placed **Rack Cabinets** automatically act as housing units. When switches, patch panels, or routers are positioned at the exact same location as a Rack, they visually snap into a realistic rack-mounted frame layout instead of standard circular symbols, remaining individually clickable.
 - **🧲 Snap to Grid**: Toggle a 20px visual grid overlay, adjust its offset manually by dragging with **Shift**, and automatically snap devices and cable joints to grid intersections for precise alignments.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.

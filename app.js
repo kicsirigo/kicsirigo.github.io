@@ -1163,8 +1163,13 @@ const i18n = {
     
     function showPortPopup(devIndex, wx, wy) {
         const dev = devices[devIndex];
+        if (!dev.id) dev.id = Math.random().toString(36).substr(2, 9);
+        if (!dev.ports) dev.ports = {};
+        if (!dev.portCount) dev.portCount = getDefaultPortCount(dev.type);
+        
         portPopupGrid.innerHTML = '';
-        for (let i = 0; i < dev.ports.length; i++) {
+        for (let i = 0; i < dev.portCount; i++) {
+            if (!dev.ports[i]) dev.ports[i] = {};
             const p = dev.ports[i];
             const btn = document.createElement('div');
             btn.className = 'port-popup-btn' + (p.conn ? ' used' : '');

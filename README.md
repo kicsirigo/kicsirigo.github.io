@@ -18,7 +18,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
   - 🟡 **Access Point (AP)**
   - 🔵 **Client PC (PC)**
 - **⚡ Switch Port Customization**: Click on any placed Switch to open an interactive switch faceplate view where you can customize individual ports (Port Label, VLAN ID, Port Mode, Connection details, and Notes) with real-time visual status cues.
-- **🧲 Snap to Grid**: Toggle a 20px visual grid overlay and automatically snap devices and cable joints to grid intersections for precise alignments.
+- **🧲 Snap to Grid**: Toggle a 20px visual grid overlay, adjust its offset manually by dragging with **Shift**, and automatically snap devices and cable joints to grid intersections for precise alignments.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
 - 📄 **PDF Export**: Save your annotated floorplan along with cables, devices, and measurements as a PDF document.
@@ -45,7 +45,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 6. **Manage & Refine**:
    - **Right-Click** (or long tap) on any device or point to rename or delete it.
    - Press `Ctrl + Z` or click **Undo** to roll back your last action.
-   - Toggle **🧲 Grid** to overlay a positioning grid and enable smart snapping for cables and devices.
+   - Toggle **🧲 Grid** to overlay a positioning grid. Hold **Shift** and drag to manually align the grid lines with your floorplan's walls.
 7. **Export**: Click **Export** to download your annotated floorplan as a PDF.
 
 ---

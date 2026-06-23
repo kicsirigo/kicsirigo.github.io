@@ -48,7 +48,8 @@ const i18n = {
     function t(key, arg1 = "") { return i18n[lang][key].replace("{0}", arg1); }
 
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
-    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable');
+    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), selectCableType = document.getElementById('cable-type-select');
+    const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
     const btnExport = document.getElementById('btn-export'), btnExportPlan = document.getElementById('btn-export-plan'), status = document.getElementById('status');
     const measurements = document.getElementById('measurements'), canvasContainer = document.getElementById('canvas-container');
@@ -60,7 +61,7 @@ const i18n = {
     const deviceShortnames = { router: 'RT', switch: 'SW', patch: 'PP', ap: 'AP', pc: 'PC', rack: 'RACK' };
 
     let img = new Image();
-    let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
+    let mode = 'none', scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
     let showLayers = true, snapToGrid = false;
     let gridOffsetX = 0, gridOffsetY = 0;
@@ -111,14 +112,15 @@ const i18n = {
 
     function restoreState(data, resetCamera) {
         scalePoints = data.scalePoints || [];
-        cables = data.cables || [[]];
+        let loadedCables = data.cables || [{ type: 'cat6', points: [] }];
+        cables = loadedCables.map(c => Array.isArray(c) ? { type: 'default', points: c } : c);
         devices = data.devices || [];
         pixelsPerMeter = data.pixelsPerMeter || null;
         gridOffsetX = data.gridOffsetX || 0;
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -147,7 +149,7 @@ const i18n = {
     function loadImageData(src) {
         img.onload = () => {
             resizeCanvas();
-            scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
+            scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
@@ -237,7 +239,7 @@ const i18n = {
             if (Math.hypot(pos.x - wPos.x, pos.y - wPos.y) < hit) return { array: devices, index: i, type: 'device' };
         }
         for (let i = 0; i < scalePoints.length; i++) if (Math.hypot(scalePoints[i].x - wPos.x, scalePoints[i].y - wPos.y) < hit) return { array: scalePoints, index: i, type: 'scale' };
-        for (let c = cables.length - 1; c >= 0; c--) for (let i = 0; i < cables[c].length; i++) if (Math.hypot(cables[c][i].x - wPos.x, cables[c][i].y - wPos.y) < hit) return { array: cables[c], index: i, type: 'cable', cableIndex: c };
+        for (let c = cables.length - 1; c >= 0; c--) for (let i = 0; i < cables[c].points.length; i++) if (Math.hypot(cables[c].points[i].x - wPos.x, cables[c].points[i].y - wPos.y) < hit) return { array: cables[c].points, index: i, type: 'cable', cableIndex: c };
         return null;
     }
 
@@ -292,7 +294,7 @@ const i18n = {
         contextMenu.style.display = 'none';
         if (activeContextMenuTarget) {
             if (activeContextMenuTarget.type === 'cable') {
-                cables[activeContextMenuTarget.cableIndex].splice(activeContextMenuTarget.index, 1);
+                cables[activeContextMenuTarget.cableIndex].points.splice(activeContextMenuTarget.index, 1);
             } else if (activeContextMenuTarget.type === 'scale') {
                 scalePoints.splice(activeContextMenuTarget.index, 1);
                 pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
@@ -524,7 +526,7 @@ const i18n = {
             redraw(); 
         } 
         else if (mode === 'measure') { 
-            cables[activeCableIndex].push(applyGridSnap(wPos)); 
+            cables[activeCableIndex].points.push(applyGridSnap(wPos)); 
             actionHistory.push({ type: 'cable', cableIndex: activeCableIndex });
             redraw(); 
         }
@@ -703,7 +705,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnUndo.disabled = btnClear.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
                 redraw();
                 autoSave();
             } else {
@@ -716,7 +718,7 @@ const i18n = {
 // --- GOMBOK HOZZÁRENDELÉSEI ---
     btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; status.innerText = t('statScale'); redraw(); });
     btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); status.innerText = t('statMeasure'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].length > 0) { cables.push([]); activeCableIndex = cables.length - 1; status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 
@@ -728,8 +730,8 @@ const i18n = {
                 scalePoints.pop();
                 pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
             } else if (lastAction.type === 'cable') {
-                if (cables[lastAction.cableIndex] && cables[lastAction.cableIndex].length > 0) {
-                    cables[lastAction.cableIndex].pop();
+                if (cables[lastAction.cableIndex] && cables[lastAction.cableIndex].points.length > 0) {
+                    cables[lastAction.cableIndex].points.pop();
                 } else if (lastAction.cableIndex > 0) {
                     cables.pop(); 
                     activeCableIndex--;
@@ -740,7 +742,7 @@ const i18n = {
         }
     });
 
-    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[[]]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
+    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[{ type: selectCableType.value || 'cat6', points: [] }]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
 
     btnExportPlan.addEventListener('click', () => {
         if (!img.src) return;
@@ -857,9 +859,11 @@ const i18n = {
         // ponytail: Added showLayers toggle check to support layer visibility
         if (showLayers) {
             // Kábelek és pontok rajzolása
-            cables.forEach((cable, cIndex) => {
+            cables.forEach((cableObj, cIndex) => {
+                const cable = cableObj.points;
                 if (cable.length === 0) return;
-                ctx.strokeStyle = cableColors[cIndex % cableColors.length]; ctx.lineWidth = (cIndex === activeCableIndex ? 5 : 3) / zoom; ctx.fillStyle = 'white';
+                const typeColor = CABLE_TYPES[cableObj.type] ? CABLE_TYPES[cableObj.type].color : '#f5bde6';
+                ctx.strokeStyle = typeColor; ctx.lineWidth = (cIndex === activeCableIndex ? 5 : 3) / zoom; ctx.fillStyle = 'white';
                 ctx.beginPath(); ctx.moveTo(cable[0].x, cable[0].y);
                 for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y); ctx.stroke();
                 cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
@@ -959,14 +963,20 @@ const i18n = {
         // Calculate cable lengths in a single pass
         if (pixelsPerMeter) {
             let totalMeters = 0, activeLen = 0;
-            cables.forEach((cable, cIndex) => {
+            let typeLengths = {};
+            cables.forEach((cableObj, cIndex) => {
+                const cable = cableObj.points;
+                let cType = cableObj.type || 'default';
+                if (!typeLengths[cType]) typeLengths[cType] = 0;
                 for (let i = 1; i < cable.length; i++) {
                     const seg = Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter;
                     totalMeters += seg;
+                    typeLengths[cType] += seg;
                     if (cIndex === activeCableIndex) activeLen += seg;
                 }
             });
-            measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success);">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span>`;
+            let typeHtml = Object.keys(typeLengths).filter(t => typeLengths[t] > 0).map(t => `<span style="color:${CABLE_TYPES[t] ? CABLE_TYPES[t].color : '#f5bde6'}">${CABLE_TYPES[t] ? CABLE_TYPES[t].name : t}: ${typeLengths[t].toFixed(2)}m</span>`).join(' | ');
+            measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success); margin-right:15px;">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span><span style="font-size:0.85em;">(${typeHtml})</span>`;
         } else {
             measurements.innerHTML = '';
         }

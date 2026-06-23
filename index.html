@@ -79,7 +79,7 @@
         .sidebar-title { font-size: 0.7em; font-weight: bold; text-transform: uppercase; color: var(--subtext); text-align: center; margin-bottom: 5px; }
         .sidebar-item { width: 60px; height: 60px; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: grab; transition: all 0.2s; font-size: 0.7em; font-weight: bold; user-select: none; text-align: center; padding: 2px; }
         .sidebar-item:hover { transform: scale(1.08); box-shadow: 0 4px 10px var(--shadow); }
-        .sidebar-item.active-place { }
+
         .sidebar-item.active-place[data-type="router"] { background: var(--dev-router); color: #11111b !important; border-color: var(--dev-router) !important; }
         .sidebar-item.active-place[data-type="switch"] { background: var(--dev-switch); color: #11111b !important; border-color: var(--dev-switch) !important; }
         .sidebar-item.active-place[data-type="patch"] { background: var(--dev-patch); color: #11111b !important; border-color: var(--dev-patch) !important; }
@@ -170,14 +170,7 @@
         }
         .sw-port-led.has-config::after { background: #40a02b; box-shadow: 0 0 5px #40a02b99; }
         .sw-port-led.selected::after { background: #8aadf4; box-shadow: 0 0 5px #8aadf499; }
-        #sw-port-num-row {
-            display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
-            justify-content: flex-start;
-        }
-        .sw-port-num {
-            width: 28px; text-align: center;
-            font-size: 8px; color: #444660; font-weight: 600;
-        }
+
         /* Editor panel */
         #sw-editor {
             padding: 16px 20px; overflow-y: auto; flex: 1;
@@ -358,7 +351,6 @@
     </div>
     <div id="sw-faceplate">
       <div class="sw-port-row" id="sw-port-leds"></div>
-      <div id="sw-port-num-row"></div>
     </div>
     <div id="sw-editor">
       <div id="sw-editor-placeholder">Click a port to configure it.</div>
@@ -442,7 +434,7 @@
     const deviceColors = { router: '#c6a0f6', switch: '#8bd5ca', patch: '#f5bde6', ap: '#eed49f' };
     const deviceShortnames = { router: 'RT', switch: 'SW', patch: 'PP', ap: 'AP' };
 
-    let img = new Image(), originalImageWidth = 0, originalImageHeight = 0;
+    let img = new Image();
     let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
     let showLayers = true;
@@ -487,6 +479,23 @@
     function resizeCanvas() { canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; redraw(); }
     window.addEventListener('resize', resizeCanvas);
 
+    function restoreState(data, resetCamera) {
+        scalePoints = data.scalePoints || [];
+        cables = data.cables || [[]];
+        devices = data.devices || [];
+        pixelsPerMeter = data.pixelsPerMeter || null;
+        activeCableIndex = cables.length - 1;
+        btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
+        btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
+        if (resetCamera) {
+            zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
+            cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
+            cameraY = (data.cameraY !== undefined) ? data.cameraY : (canvas.height - img.height * zoom) / 2;
+        }
+        status.innerText = t('statLoaded');
+        redraw();
+    }
+
     document.getElementById('upload').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
@@ -494,27 +503,8 @@
             reader.onload = ev => {
                 try {
                     const data = JSON.parse(ev.target.result);
-                    if (data.imgSrc) {
-                        img.onload = () => {
-                            originalImageWidth = img.width; originalImageHeight = img.height; resizeCanvas();
-                            zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
-                            cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
-                            cameraY = (data.cameraY !== undefined) ? data.cameraY : (canvas.height - img.height * zoom) / 2;
-                            scalePoints = data.scalePoints || [];
-                            cables = data.cables || [[]];
-                            devices = data.devices || [];
-                            pixelsPerMeter = data.pixelsPerMeter || null;
-                            activeCableIndex = cables.length - 1;
-                            btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
-                            btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
-                            status.innerText = t('statLoaded');
-                            redraw();
-                        };
-                        img.src = data.imgSrc;
-                    }
-                } catch (err) {
-                    alert('Error loading JSON data');
-                }
+                    if (data.imgSrc) { img.onload = () => { resizeCanvas(); restoreState(data, true); }; img.src = data.imgSrc; }
+                } catch (err) { alert('Error loading JSON data'); }
             };
             reader.readAsText(file);
         } else if (file.type === 'application/pdf') {
@@ -532,10 +522,10 @@
 
     function loadImageData(src) {
         img.onload = () => {
-            originalImageWidth = img.width; originalImageHeight = img.height; resizeCanvas();
+            resizeCanvas();
+            scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
-            scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
             status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
@@ -629,7 +619,7 @@
 
     document.getElementById('ctx-undo').addEventListener('click', () => {
         contextMenu.style.display = 'none';
-        if (!btnUndo.disabled) btnUndo.click();
+        if (!btnUndo.disabled) btnUndo.dispatchEvent(new MouseEvent('click'));
     });
 
     // --- CTRL + Z (UNDO) ---
@@ -682,6 +672,15 @@
         showSwEditor(portNum, device);
     }
 
+    // [id, stateKey, defaultVal]
+    const SW_FIELDS = [
+        ['sw-f-label', 'label', ''],
+        ['sw-f-vlan',  'vlan',  ''],
+        ['sw-f-mode',  'mode',  'access'],
+        ['sw-f-conn',  'conn',  ''],
+        ['sw-f-notes', 'notes', '']
+    ];
+
     function showSwEditor(portNum, device) {
         const ph = document.getElementById('sw-editor-placeholder');
         const ed = document.getElementById('sw-port-editor');
@@ -689,41 +688,31 @@
         ph.style.display = 'none'; ed.style.display = '';
         const cfg = (device || switchModalDevice).ports[portNum] || {};
         document.getElementById('sw-port-editor-title').textContent = `Port ${portNum}`;
-        document.getElementById('sw-f-label').value = cfg.label || '';
-        document.getElementById('sw-f-vlan').value = cfg.vlan || '';
-        document.getElementById('sw-f-mode').value = cfg.mode || 'access';
-        document.getElementById('sw-f-conn').value = cfg.conn || '';
-        document.getElementById('sw-f-notes').value = cfg.notes || '';
+        SW_FIELDS.forEach(([id, key, def]) => { document.getElementById(id).value = cfg[key] ?? def; });
     }
 
     function saveCurrentPortFields() {
         if (swSelectedPort === null || !switchModalDevice) return;
-        const vlanVal = parseInt(document.getElementById('sw-f-vlan').value);
-        const cfg = {
-            label: document.getElementById('sw-f-label').value.trim(),
-            vlan: isNaN(vlanVal) ? null : vlanVal,
-            mode: document.getElementById('sw-f-mode').value,
-            conn: document.getElementById('sw-f-conn').value.trim(),
-            notes: document.getElementById('sw-f-notes').value.trim()
-        };
-        if (cfg.label || cfg.vlan || cfg.conn || cfg.notes) {
-            switchModalDevice.ports[swSelectedPort] = cfg;
-        } else {
-            delete switchModalDevice.ports[swSelectedPort];
-        }
+        const cfg = {};
+        SW_FIELDS.forEach(([id, key]) => { cfg[key] = document.getElementById(id).value; });
+        cfg.vlan = parseInt(cfg.vlan) || null;
+        if (typeof cfg.label === 'string') cfg.label = cfg.label.trim();
+        if (typeof cfg.conn  === 'string') cfg.conn  = cfg.conn.trim();
+        if (typeof cfg.notes === 'string') cfg.notes = cfg.notes.trim();
+        const isConfigured = !!(cfg.label || cfg.vlan || cfg.conn || cfg.notes || cfg.mode !== 'access');
+        if (isConfigured) { switchModalDevice.ports[swSelectedPort] = cfg; }
+        else { delete switchModalDevice.ports[swSelectedPort]; }
+        const ledEl = document.querySelector(`.sw-port-led[data-port="${swSelectedPort}"]`);
+        if (ledEl) ledEl.classList.toggle('has-config', isConfigured);
     }
 
-    document.getElementById('switch-modal-close').addEventListener('click', () => {
+    function closeSwModal() {
         saveCurrentPortFields();
         document.getElementById('switch-modal-overlay').classList.remove('open');
         autoSave(); redraw();
-    });
-
-    document.getElementById('sw-btn-save').addEventListener('click', () => {
-        saveCurrentPortFields();
-        document.getElementById('switch-modal-overlay').classList.remove('open');
-        autoSave(); redraw();
-    });
+    }
+    document.getElementById('switch-modal-close').addEventListener('click', closeSwModal);
+    document.getElementById('sw-btn-save').addEventListener('click', closeSwModal);
 
     document.getElementById('sw-btn-clear-port').addEventListener('click', () => {
         if (swSelectedPort === null || !switchModalDevice) return;
@@ -732,9 +721,11 @@
         buildSwitchFaceplate(switchModalDevice);
     });
 
-    // Auto-save port fields on input change
-    ['sw-f-label','sw-f-vlan','sw-f-mode','sw-f-conn','sw-f-notes'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { if (swSelectedPort !== null) saveCurrentPortFields(); });
+    SW_FIELDS.forEach(([id]) => {
+        const el = document.getElementById(id);
+        const save = () => { if (swSelectedPort !== null) saveCurrentPortFields(); };
+        el.addEventListener('input', save);
+        el.addEventListener('change', save);
     });
 
     // Close on overlay backdrop click
@@ -833,9 +824,21 @@
 
     // Single-click on a switch device opens the switch panel modal (handled in handleEnd)
 
-    canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) handleStart(e, true); }, {passive: true});
-    canvasContainer.addEventListener('touchmove', e => { if(e.touches.length === 1) handleMove(e, true); }, {passive: true});
-    window.addEventListener('touchend', () => { handleEnd(); });
+    canvasContainer.addEventListener('touchstart', e => { 
+        if(e.touches.length === 1) {
+            e.preventDefault(); 
+            handleStart(e, true); 
+        }
+    }, {passive: false});
+    canvasContainer.addEventListener('touchmove', e => { 
+        if(e.touches.length === 1) {
+            e.preventDefault(); 
+            handleMove(e, true); 
+        }
+    }, {passive: false});
+    window.addEventListener('touchend', e => { 
+        handleEnd(); 
+    });
 
     // Snapping helper
     function getSnappedPos(pos) {
@@ -852,13 +855,8 @@
     function autoSave() {
         if (!img.src) return;
         const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY };
-        if (img.src && img.src.length < 1500000) data.imgSrc = img.src;
-        try {
-            localStorage.setItem('measurer_workspace', JSON.stringify(data));
-        } catch (e) {
-            delete data.imgSrc;
-            localStorage.setItem('measurer_workspace', JSON.stringify(data));
-        }
+        if (img.src.length < 1500000) data.imgSrc = img.src;
+        localStorage.setItem('measurer_workspace', JSON.stringify(data));
     }
 
     // Gombok logika & UNDO
@@ -1032,23 +1030,16 @@
         // Close camera transform
         ctx.restore();
 
-        // Calculate lengths always to keep status up-to-date
-        let totalMeters = 0;
-        if(pixelsPerMeter) {
-            cables.forEach((cable) => {
-                if(cable.length > 1) { 
-                    for (let i = 1; i < cable.length; i++) {
-                        totalMeters += Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter;
-                    }
+        // Calculate cable lengths in a single pass
+        if (pixelsPerMeter) {
+            let totalMeters = 0, activeLen = 0;
+            cables.forEach((cable, cIndex) => {
+                for (let i = 1; i < cable.length; i++) {
+                    const seg = Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter;
+                    totalMeters += seg;
+                    if (cIndex === activeCableIndex) activeLen += seg;
                 }
             });
-
-            let activeLen = 0; 
-            if(cables[activeCableIndex].length > 1) { 
-                for (let i = 1; i < cables[activeCableIndex].length; i++) {
-                    activeLen += Math.hypot(cables[activeCableIndex][i].x - cables[activeCableIndex][i-1].x, cables[activeCableIndex][i].y - cables[activeCableIndex][i-1].y) / pixelsPerMeter; 
-                }
-            }
             measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success);">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span>`;
         } else {
             measurements.innerHTML = '';
@@ -1056,39 +1047,17 @@
     }
 
     function loadSavedWorkspace() {
-        const raw = localStorage.getItem('measurer_workspace');
-        if (!raw) return;
         try {
-            const data = JSON.parse(raw);
+            const data = JSON.parse(localStorage.getItem('measurer_workspace') || 'null');
+            if (!data) return;
             if (data.imgSrc) {
-                img.onload = () => {
-                    originalImageWidth = img.width; originalImageHeight = img.height; resizeCanvas();
-                    zoom = data.zoom || zoom;
-                    cameraX = (data.cameraX !== undefined) ? data.cameraX : cameraX;
-                    cameraY = (data.cameraY !== undefined) ? data.cameraY : cameraY;
-                    scalePoints = data.scalePoints || [];
-                    cables = data.cables || [[]];
-                    devices = data.devices || [];
-                    pixelsPerMeter = data.pixelsPerMeter || null;
-                    activeCableIndex = cables.length - 1;
-                    btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
-                    btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
-                    status.innerText = t('statLoaded');
-                    redraw();
-                };
+                img.onload = () => { resizeCanvas(); restoreState(data, true); };
                 img.src = data.imgSrc;
             } else {
-                scalePoints = data.scalePoints || [];
-                cables = data.cables || [[]];
-                devices = data.devices || [];
-                pixelsPerMeter = data.pixelsPerMeter || null;
-                activeCableIndex = cables.length - 1;
-                if (pixelsPerMeter) {
-                    btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = false;
-                }
+                restoreState(data, false);
             }
         } catch (e) {
-            console.error("Error loading saved workspace", e);
+            console.error('Error loading saved workspace', e);
         }
     }
 

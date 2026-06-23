@@ -615,9 +615,24 @@
         return { x: ((cx - r.left) - cameraX) / zoom, y: ((cy - r.top) - cameraY) / zoom };
     }
 
+    function getDeviceDrawPos(index) {
+        const d = devices[index];
+        if (!d) return { x: 0, y: 0 };
+        let stackIndex = 0;
+        for (let i = 0; i < index; i++) {
+            if (Math.abs(devices[i].x - d.x) < 1 && Math.abs(devices[i].y - d.y) < 1) {
+                stackIndex++;
+            }
+        }
+        return { x: d.x, y: d.y + (stackIndex * 20) };
+    }
+
     function findHoveredPoint(wPos) {
         const hit = 18 / zoom;
-        for (let i = devices.length - 1; i >= 0; i--) if (Math.hypot(devices[i].x - wPos.x, devices[i].y - wPos.y) < hit) return { array: devices, index: i, type: 'device' };
+        for (let i = devices.length - 1; i >= 0; i--) {
+            const pos = getDeviceDrawPos(i);
+            if (Math.hypot(pos.x - wPos.x, pos.y - wPos.y) < hit) return { array: devices, index: i, type: 'device' };
+        }
         for (let i = 0; i < scalePoints.length; i++) if (Math.hypot(scalePoints[i].x - wPos.x, scalePoints[i].y - wPos.y) < hit) return { array: scalePoints, index: i, type: 'scale' };
         for (let c = cables.length - 1; c >= 0; c--) for (let i = 0; i < cables[c].length; i++) if (Math.hypot(cables[c][i].x - wPos.x, cables[c][i].y - wPos.y) < hit) return { array: cables[c], index: i, type: 'cable', cableIndex: c };
         return null;
@@ -842,12 +857,13 @@
         // In measure/scale mode, don't intercept device clicks — let them add points normally.
         // Only grab devices as draggedPoints in 'none' mode (so they can be moved).
         if (hov) {
-            if (hov.type === 'device' && mode !== 'none') {
-                // fall through to measure/scale point-adding logic below
+            if ((hov.type === 'device' && mode !== 'none') || activePlaceDevice) {
+                // fall through to measure/scale point-adding or device placement logic below
             } else {
                 draggedPoint = hov;
-                dragOffsetX = hov.array[hov.index].x - wPos.x;
-                dragOffsetY = hov.array[hov.index].y - wPos.y;
+                const hovPos = hov.type === 'device' ? getDeviceDrawPos(hov.index) : hov.array[hov.index];
+                dragOffsetX = hovPos.x - wPos.x;
+                dragOffsetY = hovPos.y - wPos.y;
                 if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; status.innerText = t('statEditCable', activeCableIndex + 1); }
                 redraw();
                 return;
@@ -1018,10 +1034,12 @@
     // Snapping helper
     function getSnappedPos(pos) {
         const snapDist = 15 / zoom;
-        for (let d of devices) {
-            if (Math.hypot(d.x - pos.x, d.y - pos.y) < snapDist) {
-                return { x: d.x, y: d.y };
-            }
+        for (let i = devices.length - 1; i >= 0; i--) {
+            const dPos = getDeviceDrawPos(i);
+            if (Math.hypot(dPos.x - pos.x, dPos.y - pos.y) < snapDist) return { x: dPos.x, y: dPos.y };
+        }
+        for (let s of scalePoints) {
+            if (Math.hypot(s.x - pos.x, s.y - pos.y) < snapDist) return { x: s.x, y: s.y };
         }
         return pos;
     }
@@ -1210,7 +1228,8 @@
 
             // Eszközök rajzolása
             devices.forEach((d, i) => {
-                ctx.save(); ctx.translate(d.x, d.y);
+                const pos = getDeviceDrawPos(i);
+                ctx.save(); ctx.translate(pos.x, pos.y);
                 let color = deviceColors[d.type] || '#8aadf4';
                 const shortLabel = d.name || deviceShortnames[d.type] || 'DEV';
                 const radius = 15 / zoom;

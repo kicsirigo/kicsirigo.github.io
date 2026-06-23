@@ -1,8 +1,10 @@
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
 const i18n = {
         en: {
             help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnConnect: "Connect", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PNG", btnExportPlan: "Save .plan",
+            btnNewCable: "New Cable", btnConnect: "Connect", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -23,7 +25,7 @@ const i18n = {
         hu: {
             help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnConnect: "Összekötés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Kép Export", btnExportPlan: "Mentés .plan",
+            btnNewCable: "Új kábel", btnConnect: "Összekötés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -142,6 +144,14 @@ const i18n = {
                 } catch (err) { alert('Error loading JSON data'); }
             };
             reader.readAsText(file);
+        } else if (file.type === 'application/pdf') {
+            reader.onload = event => {
+                pdfjsLib.getDocument(new Uint8Array(event.target.result)).promise.then(pdf => pdf.getPage(1)).then(page => {
+                    const vp = page.getViewport({scale: 2.0}), tc = document.createElement('canvas'), tctx = tc.getContext('2d');
+                    tc.width = vp.width; tc.height = vp.height;
+                    page.render({canvasContext: tctx, viewport: vp}).promise.then(() => loadImageData(tc.toDataURL('image/png')));
+                });
+            }; reader.readAsArrayBuffer(file);
         } else {
             reader.onload = ev => loadImageData(ev.target.result); reader.readAsDataURL(file);
         }
@@ -787,10 +797,24 @@ const i18n = {
         mode = 'export';
         redraw();
         
-        const link = document.createElement('a');
-        link.download = 'floorplan_measured.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        try {
+            const { jsPDF } = window.jspdf;
+            const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
+            const pdf = new jsPDF({
+                orientation: orientation,
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+            pdf.save('floorplan_measured.pdf');
+        } catch (e) {
+            console.error("PDF export failed, falling back to PNG", e);
+            const link = document.createElement('a');
+            link.download = 'floorplan_measured.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
         
         mode = prevMode;
         redraw();

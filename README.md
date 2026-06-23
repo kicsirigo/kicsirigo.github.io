@@ -24,7 +24,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - **🎨 Catppuccin Theme Palette**: Smooth, gorgeous light and dark mode styling with smooth transitions.
 - 🌍 **Internationalization (i18n)**: Fully localized interface in English 🇬🇧 and Hungarian 🇭🇺.
 - 💾 **Workspace Backup (.plan)**: Save your workspace state to a `.plan` file and seamlessly load it later to continue working.
-- 🖼️ **Image Export**: Save your annotated floorplan along with cables, devices, and measurements as a PNG image.
+- 📄 **PDF Export**: Save your annotated floorplan along with cables, devices, and measurements as a PDF document.
 - ⚡ **Auto-save**: Automatically saves your current workspace in the browser's local storage so you never lose your progress.
 - 📱 **Mobile & Touch Optimization**: Full support for native two-finger pinch-to-zoom / panning, and a custom vertical offset when dragging points so your finger doesn't block your view.
 
@@ -32,7 +32,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 
 ## 🚀 How to Use
 
-1. **Upload**: Drag or choose an image file of your floorplan.
+1. **Upload**: Drag or choose an image or PDF file of your floorplan.
 2. **Calibrate**:
    - Click the **Scale** button.
    - Click on the start and end point of a known distance (like a door width or wall line).
@@ -53,7 +53,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Press `Ctrl + Z` or click **Undo** to roll back your last action.
    - Toggle **🧲 Grid** to overlay a positioning grid. Hold **Shift** and drag to manually align the grid lines with your floorplan's walls.
 7. **Export & Backup**: 
-   - Click **Export PNG** to download your annotated floorplan as an image.
+   - Click **Export PDF** to download your annotated floorplan as a PDF.
    - Click **Save .plan** to backup your workspace state, which you can load back by dragging the `.plan` file onto the app later.
 
 > [!TIP]
@@ -69,4 +69,6 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 - **HTML5 Canvas** - High-performance drawing engine.
 - **Vanilla CSS3** - Customized styling with CSS custom properties (variables) for theme management.
 - **Vanilla JavaScript** - Clean, zero-framework logic.
+- **PDF.js** - Client-side rendering of PDF documents.
+- **jsPDF** - Client-side PDF generation.
 

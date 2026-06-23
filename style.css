@@ -257,3 +257,18 @@
             .sw-field-row { grid-template-columns: 1fr; gap: 4px; }
             .sw-field-row label { font-size: 0.8em; }
         }
+
+.port-popup {
+    position: absolute; display: none; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; box-shadow: 0 4px 15px var(--shadow); z-index: 200;
+    width: 250px; flex-direction: column; gap: 8px;
+}
+.port-popup.open { display: flex; }
+.port-popup-title { font-weight: bold; text-align: center; font-size: 0.9em; margin-bottom: 5px; }
+.port-popup-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; max-height: 150px; overflow-y: auto; }
+.port-popup-btn {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px; text-align: center; cursor: pointer; font-size: 0.8em; color: var(--text);
+}
+.port-popup-btn:hover { background: var(--border); }
+.port-popup-btn.used { background: var(--success); color: var(--bg); opacity: 0.5; cursor: not-allowed; }

@@ -2,7 +2,7 @@ const i18n = {
         en: {
             help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PNG", btnExportPlan: "Save .plan",
+            btnNewCable: "New Cable", btnConnect: "Connect", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PNG", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -23,7 +23,7 @@ const i18n = {
         hu: {
             help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Kép Export", btnExportPlan: "Mentés .plan",
+            btnNewCable: "Új kábel", btnConnect: "Összekötés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "Kép Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -48,7 +48,7 @@ const i18n = {
     function t(key, arg1 = "") { return i18n[lang][key].replace("{0}", arg1); }
 
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
-    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), selectCableType = document.getElementById('cable-type-select');
+    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), selectCableType = document.getElementById('cable-type-select');
     const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
     const btnExport = document.getElementById('btn-export'), btnExportPlan = document.getElementById('btn-export-plan'), status = document.getElementById('status');
@@ -61,7 +61,7 @@ const i18n = {
     const deviceShortnames = { router: 'RT', switch: 'SW', patch: 'PP', ap: 'AP', pc: 'PC', rack: 'RACK' };
 
     let img = new Image();
-    let mode = 'none', scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = []; 
+    let mode = 'none', connectState = { devA: null, portA: null }, scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
     let showLayers = true, snapToGrid = false;
     let gridOffsetX = 0, gridOffsetY = 0;
@@ -115,12 +115,13 @@ const i18n = {
         let loadedCables = data.cables || [{ type: 'cat6', points: [] }];
         cables = loadedCables.map(c => Array.isArray(c) ? { type: 'default', points: c } : c);
         devices = data.devices || [];
+        devices.forEach(d => { if (!d.id) d.id = Math.random().toString(36).substr(2, 9); });
         pixelsPerMeter = data.pixelsPerMeter || null;
         gridOffsetX = data.gridOffsetX || 0;
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -509,6 +510,28 @@ const i18n = {
                 redraw();
                 return;
             }
+        } else if (mode === 'none') {
+            for (let c = cables.length - 1; c >= 0; c--) {
+                let cableObj = cables[c];
+                let points = cableObj.points;
+                let fullCable = points;
+                if ('fromDev' in cableObj) {
+                    let d1 = devices.find(d => d.id === cableObj.fromDev);
+                    let d2 = devices.find(d => d.id === cableObj.toDev);
+                    if (d1 && d2) fullCable = [{x: d1.x, y: d1.y}, ...points, {x: d2.x, y: d2.y}];
+                }
+                for (let i = 1; i < fullCable.length; i++) {
+                    const p1 = fullCable[i-1], p2 = fullCable[i];
+                    if (distToSegment(wPos, p1, p2) < 10 / zoom) {
+                        const insertIdx = ('fromDev' in cableObj) ? i - 1 : i;
+                        cableObj.points.splice(insertIdx, 0, {x: wPos.x, y: wPos.y});
+                        draggedPoint = { array: cableObj.points, index: insertIdx, type: 'cable', cableIndex: c };
+                        activeCableIndex = c;
+                        autoSave();
+                        return;
+                    }
+                }
+            }
         }
 
         if (activePlaceDevice && btn === 0) { 
@@ -705,7 +728,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
                 redraw();
                 autoSave();
             } else {
@@ -859,15 +882,36 @@ const i18n = {
         // ponytail: Added showLayers toggle check to support layer visibility
         if (showLayers) {
             // Kábelek és pontok rajzolása
+
             cables.forEach((cableObj, cIndex) => {
-                const cable = cableObj.points;
+                let cable = cableObj.points;
+                let isSmart = ('fromDev' in cableObj);
+                let pStart = null, pEnd = null;
+                
+                if (isSmart) {
+                    let d1 = devices.find(d => d.id === cableObj.fromDev);
+                    let d2 = devices.find(d => d.id === cableObj.toDev);
+                    if (d1 && d2) {
+                        pStart = {x: d1.x, y: d1.y};
+                        pEnd = {x: d2.x, y: d2.y};
+                        cable = [pStart, ...cableObj.points, pEnd];
+                    } else { return; } // broken link
+                }
+                
                 if (cable.length === 0) return;
                 const typeColor = CABLE_TYPES[cableObj.type] ? CABLE_TYPES[cableObj.type].color : '#f5bde6';
                 ctx.strokeStyle = typeColor; ctx.lineWidth = (cIndex === activeCableIndex ? 5 : 3) / zoom; ctx.fillStyle = 'white';
                 ctx.beginPath(); ctx.moveTo(cable[0].x, cable[0].y);
                 for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y); ctx.stroke();
-                cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+                
+                if (!isSmart) {
+                    cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+                } else {
+                    // Only draw bend points (not the endpoints which are anchored to devices)
+                    cableObj.points.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+                }
             });
+
 
             // Eszközök rajzolása
             devices.forEach((d, i) => {
@@ -964,8 +1008,15 @@ const i18n = {
         if (pixelsPerMeter) {
             let totalMeters = 0, activeLen = 0;
             let typeLengths = {};
+
             cables.forEach((cableObj, cIndex) => {
-                const cable = cableObj.points;
+                let cable = cableObj.points;
+                if ('fromDev' in cableObj) {
+                    let d1 = devices.find(d => d.id === cableObj.fromDev);
+                    let d2 = devices.find(d => d.id === cableObj.toDev);
+                    if (d1 && d2) cable = [{x: d1.x, y: d1.y}, ...cableObj.points, {x: d2.x, y: d2.y}];
+                }
+                
                 let cType = cableObj.type || 'default';
                 if (!typeLengths[cType]) typeLengths[cType] = 0;
                 for (let i = 1; i < cable.length; i++) {
@@ -975,6 +1026,7 @@ const i18n = {
                     if (cIndex === activeCableIndex) activeLen += seg;
                 }
             });
+
             let typeHtml = Object.keys(typeLengths).filter(t => typeLengths[t] > 0).map(t => `<span style="color:${CABLE_TYPES[t] ? CABLE_TYPES[t].color : '#f5bde6'}">${CABLE_TYPES[t] ? CABLE_TYPES[t].name : t}: ${typeLengths[t].toFixed(2)}m</span>`).join(' | ');
             measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success); margin-right:15px;">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span><span style="font-size:0.85em;">(${typeHtml})</span>`;
         } else {
@@ -1062,3 +1114,62 @@ const i18n = {
             }
         }
     }
+
+    // Smart Connections Popup
+    const portPopup = document.getElementById('port-selector-popup');
+    const portPopupGrid = document.getElementById('port-popup-grid');
+    
+    function showPortPopup(devIndex, wx, wy) {
+        const dev = devices[devIndex];
+        portPopupGrid.innerHTML = '';
+        for (let i = 0; i < dev.ports.length; i++) {
+            const p = dev.ports[i];
+            const btn = document.createElement('div');
+            btn.className = 'port-popup-btn' + (p.conn ? ' used' : '');
+            btn.innerText = i + 1;
+            btn.onclick = () => {
+                if (p.conn) return; // already used
+                hidePortPopup();
+                if (!connectState.devA) {
+                    connectState.devA = dev.id;
+                    connectState.portA = i;
+                } else {
+                    if (connectState.devA === dev.id) return; // same device
+                    // Create smart cable
+                    cables.push({
+                        type: selectCableType.value || 'cat6',
+                        fromDev: connectState.devA, fromPort: connectState.portA,
+                        toDev: dev.id, toPort: i,
+                        points: [] // intermediate points
+                    });
+                    // Update connection strings
+                    const dA = devices.find(d => d.id === connectState.devA);
+                    if(dA) dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i+1}`;
+                    dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA+1}`;
+                    connectState = { devA: null, portA: null };
+                    mode = 'none'; btnConnect.classList.remove('active');
+                    redraw(); autoSave();
+                }
+            };
+            portPopupGrid.appendChild(btn);
+        }
+        // Position relative to canvas
+        const cx = wx * zoom + cameraX + canvas.offsetLeft;
+        const cy = wy * zoom + cameraY + canvas.offsetTop;
+        portPopup.style.left = cx + 'px';
+        portPopup.style.top = cy + 'px';
+        portPopup.classList.add('open');
+    }
+
+    function hidePortPopup() { portPopup.classList.remove('open'); }
+    
+    // Hide popup on canvas move/pan
+    canvas.addEventListener('mousedown', () => { if(mode !== 'connect') hidePortPopup(); });
+
+function distToSegment(p, v, w) {
+    const l2 = (w.x - v.x)**2 + (w.y - v.y)**2;
+    if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y);
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}

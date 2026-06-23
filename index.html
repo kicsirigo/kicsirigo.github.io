@@ -79,7 +79,12 @@
         .sidebar-title { font-size: 0.7em; font-weight: bold; text-transform: uppercase; color: var(--subtext); text-align: center; margin-bottom: 5px; }
         .sidebar-item { width: 60px; height: 60px; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: grab; transition: all 0.2s; font-size: 0.7em; font-weight: bold; user-select: none; text-align: center; padding: 2px; }
         .sidebar-item:hover { transform: scale(1.08); box-shadow: 0 4px 10px var(--shadow); }
-        .sidebar-item.active-place { animation: pulseSubtle 1.5s infinite; background: var(--accent); color: var(--bg); border-color: var(--accent) !important; }
+        .sidebar-item.active-place { animation: pulseSubtle 1.5s infinite; }
+        .sidebar-item.active-place[data-type="router"] { background: var(--dev-router); color: #11111b !important; border-color: var(--dev-router) !important; }
+        .sidebar-item.active-place[data-type="switch"] { background: var(--dev-switch); color: #11111b !important; border-color: var(--dev-switch) !important; }
+        .sidebar-item.active-place[data-type="patch"] { background: var(--dev-patch); color: #11111b !important; border-color: var(--dev-patch) !important; }
+        .sidebar-item.active-place[data-type="ap"] { background: var(--dev-ap); color: #11111b !important; border-color: var(--dev-ap) !important; }
+        .sidebar-item.active-place span { color: #11111b !important; }
         
         .sidebar-item[data-type="router"] { border-color: var(--dev-router); color: var(--dev-router); }
         .sidebar-item[data-type="switch"] { border-color: var(--dev-switch); color: var(--dev-switch); }
@@ -166,15 +171,9 @@
             </button>
         </div>
         <div class="group">
-            <span style="font-size: 0.85em; font-weight: bold;">Slack (m):</span>
-            <input type="number" id="input-slack" min="0" step="0.5" value="2.0" style="width: 55px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px; text-align: center;">
             <button id="btn-toggle-layers" title="Toggle Cable/Device Visibility">👁️ Layers</button>
         </div>
         <div class="group" style="margin-left: auto;">
-            <button id="btn-export-json" class="export-btn" disabled>
-                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                <span>Save JSON</span>
-            </button>
             <button id="btn-export" class="export-btn" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 <span data-i18n="btnExport">Export</span>
@@ -307,8 +306,7 @@
     let img = new Image(), originalImageWidth = 0, originalImageHeight = 0;
     let mode = 'none', scalePoints = [], cables = [[]], devices = [], actionHistory = []; 
     let activeCableIndex = 0, pixelsPerMeter = null;
-    let cableSlack = 2.0, showLayers = true;
-    const btnExportJson = document.getElementById('btn-export-json');
+    let showLayers = true;
 
     let cameraX = 0, cameraY = 0, zoom = 1, isPanning = false, panStartX = 0, panStartY = 0;
     let draggedPoint = null, activePlaceDevice = null, activeContextMenuTarget = null, hasDragged = false;
@@ -367,11 +365,8 @@
                             cables = data.cables || [[]];
                             devices = data.devices || [];
                             pixelsPerMeter = data.pixelsPerMeter || null;
-                            cableSlack = data.cableSlack || 2.0;
-                            document.getElementById('input-slack').value = cableSlack;
                             activeCableIndex = cables.length - 1;
                             btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
-                            btnExportJson.disabled = false;
                             btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
                             status.innerText = t('statLoaded');
                             redraw();
@@ -403,7 +398,6 @@
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             scalePoints = []; cables = [[]]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
-            btnExportJson.disabled = false;
             status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
     }
@@ -591,7 +585,7 @@
     // Auto-save logic
     function autoSave() {
         if (!img.src) return;
-        const data = { scalePoints, cables, devices, pixelsPerMeter, cableSlack, zoom, cameraX, cameraY };
+        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY };
         if (img.src && img.src.length < 1500000) data.imgSrc = img.src;
         try {
             localStorage.setItem('measurer_workspace', JSON.stringify(data));
@@ -665,27 +659,6 @@
         
         mode = prevMode;
         redraw();
-    });
-
-    btnExportJson.addEventListener('click', () => {
-        if (!img.src) return;
-        const data = { scalePoints, cables, devices, pixelsPerMeter, cableSlack, zoom, cameraX, cameraY, imgSrc: img.src };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = 'floorplan_project.json';
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-    });
-
-    document.getElementById('input-slack').addEventListener('input', e => {
-        const v = parseFloat(e.target.value);
-        if (!isNaN(v) && v >= 0) {
-            cableSlack = v;
-            redraw();
-            autoSave();
-        }
     });
 
     document.getElementById('btn-toggle-layers').addEventListener('click', () => {
@@ -795,22 +768,20 @@
 
         // Calculate lengths always to keep status up-to-date
         let totalMeters = 0;
-        cables.forEach((cable, cIndex) => {
-            if(pixelsPerMeter && cable.length > 1) { 
-                let segmentLen = 0;
-                for (let i = 1; i < cable.length; i++) segmentLen += Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter; 
-                totalMeters += segmentLen + cableSlack;
-            }
-        });
+        if(pixelsPerMeter) {
+            cables.forEach((cable) => {
+                if(cable.length > 1) { 
+                    for (let i = 1; i < cable.length; i++) {
+                        totalMeters += Math.hypot(cable[i].x - cable[i-1].x, cable[i].y - cable[i-1].y) / pixelsPerMeter;
+                    }
+                }
+            });
 
-        // 3. LÉPÉS: Méterek kiíratása a képernyőre
-        if (pixelsPerMeter && !isExport) {
             let activeLen = 0; 
             if(cables[activeCableIndex].length > 1) { 
                 for (let i = 1; i < cables[activeCableIndex].length; i++) {
                     activeLen += Math.hypot(cables[activeCableIndex][i].x - cables[activeCableIndex][i-1].x, cables[activeCableIndex][i].y - cables[activeCableIndex][i-1].y) / pixelsPerMeter; 
                 }
-                activeLen += cableSlack;
             }
             measurements.innerHTML = `<span style="color:var(--danger);margin-right:15px;">${t('textActive', activeCableIndex+1)}: <b>${activeLen.toFixed(2)} m</b></span><span style="color:var(--success);">${t('textTotal')}: <b>${totalMeters.toFixed(2)} m</b></span>`;
         } else {
@@ -833,11 +804,8 @@
                     cables = data.cables || [[]];
                     devices = data.devices || [];
                     pixelsPerMeter = data.pixelsPerMeter || null;
-                    cableSlack = data.cableSlack || 2.0;
-                    document.getElementById('input-slack').value = cableSlack;
                     activeCableIndex = cables.length - 1;
                     btnScale.disabled = false; btnExport.disabled = false; btnUndo.disabled = false;
-                    btnExportJson.disabled = false;
                     btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = (pixelsPerMeter === null);
                     status.innerText = t('statLoaded');
                     redraw();
@@ -848,8 +816,6 @@
                 cables = data.cables || [[]];
                 devices = data.devices || [];
                 pixelsPerMeter = data.pixelsPerMeter || null;
-                cableSlack = data.cableSlack || 2.0;
-                document.getElementById('input-slack').value = cableSlack;
                 activeCableIndex = cables.length - 1;
                 if (pixelsPerMeter) {
                     btnMeasure.disabled = btnNewCable.disabled = btnClear.disabled = false;

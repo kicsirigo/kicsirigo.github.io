@@ -132,54 +132,56 @@
         #switch-modal-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 14px 20px; border-bottom: 1px solid var(--border);
-            background: #1e2030;
+            background: var(--panel);
         }
         #switch-modal-header .sw-title {
             display: flex; align-items: center; gap: 10px;
-            font-weight: 700; font-size: 1.05em; color: #cad3f5;
+            font-weight: 700; font-size: 1.05em; color: var(--text);
         }
-        #switch-modal-header .sw-title svg { stroke: #8bd5ca; }
+        #switch-modal-header .sw-title svg { stroke: var(--dev-switch); }
         #switch-modal-close {
-            background: none; border: none; cursor: pointer;
-            color: #a5adcb; font-size: 1.4em; padding: 2px 8px;
+            background: none; border: 1px solid var(--border); cursor: pointer;
+            color: var(--subtext); font-size: 1.2em; padding: 2px 8px;
             border-radius: 6px; transition: background 0.15s;
         }
         #switch-modal-close:hover { background: var(--border); color: var(--text); transform: none; box-shadow: none; }
-        /* Physical faceplate */
+        /* Physical faceplate — always dark like real hardware */
         #sw-faceplate {
-            background: #12131a; padding: 18px 20px 10px;
-            border-bottom: 1px solid #2a2d3e;
+            background: #1a1c2a; padding: 18px 20px 10px;
+            border-bottom: 1px solid var(--border);
         }
         .sw-port-row { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-start; }
         .sw-port-led {
             width: 28px; height: 22px; border-radius: 3px;
-            background: #0f0f14; border: 1px solid #2a2d3e;
+            background: #0d0e17; border: 1px solid #353849;
             cursor: pointer; position: relative;
             display: flex; align-items: center; justify-content: center;
-            font-size: 9px; font-weight: 700; color: #4a4d60;
+            font-size: 9px; font-weight: 700; color: #555870;
             transition: all 0.15s;
         }
+        .sw-port-led:hover { border-color: #8aadf4; color: #8aadf4; }
         .sw-port-led.has-config { background: #0d2b1a; border-color: #40a02b; color: #a6da95; }
-        .sw-port-led.selected { outline: 2px solid #8aadf4; outline-offset: 1px; background: #192040 !important; color: #8aadf4 !important; }
+        .sw-port-led.selected { outline: 2px solid #8aadf4; outline-offset: 2px; background: #192040 !important; color: #8aadf4 !important; border-color: #8aadf4 !important; }
         .sw-port-led::after {
             content: '';
             position: absolute; top: 3px; right: 3px;
             width: 5px; height: 5px; border-radius: 50%;
-            background: #1a1d2e;
+            background: #2a2d3e;
         }
-        .sw-port-led.has-config::after { background: #40a02b; box-shadow: 0 0 4px #40a02b; }
-        .sw-port-led.selected::after { background: #8aadf4; box-shadow: 0 0 4px #8aadf4; }
+        .sw-port-led.has-config::after { background: #40a02b; box-shadow: 0 0 5px #40a02b99; }
+        .sw-port-led.selected::after { background: #8aadf4; box-shadow: 0 0 5px #8aadf499; }
         #sw-port-num-row {
             display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
             justify-content: flex-start;
         }
         .sw-port-num {
             width: 28px; text-align: center;
-            font-size: 8px; color: #3a3d50; font-weight: 600;
+            font-size: 8px; color: #444660; font-weight: 600;
         }
         /* Editor panel */
         #sw-editor {
             padding: 16px 20px; overflow-y: auto; flex: 1;
+            background: var(--bg);
         }
         #sw-editor-placeholder {
             color: var(--subtext); font-size: 0.9em;
@@ -187,21 +189,33 @@
         }
         #sw-port-editor { display: none; }
         #sw-port-editor h3 {
-            margin: 0 0 12px; font-size: 1em; color: var(--text);
+            margin: 0 0 14px; font-size: 1em; color: var(--accent);
             display: flex; align-items: center; gap: 8px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--border);
         }
         .sw-field-row {
-            display: grid; grid-template-columns: 120px 1fr; align-items: center;
+            display: grid; grid-template-columns: 130px 1fr; align-items: center;
             gap: 8px; margin-bottom: 10px;
         }
         .sw-field-row label { font-size: 0.85em; font-weight: 600; color: var(--subtext); }
-        .sw-field-row input, .sw-field-row select {
-            padding: 6px 10px; border-radius: 6px;
-            border: 1px solid var(--border); background: var(--bg);
+        .sw-field-row input[type=\"text\"],
+        .sw-field-row input[type=\"number\"],
+        .sw-field-row select {
+            padding: 7px 10px; border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--panel);
             color: var(--text); font-size: 0.9em; width: 100%; box-sizing: border-box;
             appearance: auto;
+            outline: none;
         }
-        .sw-field-row input:focus, .sw-field-row select:focus { outline: 2px solid var(--accent); }
+        /* Reset global select style overrides inside the switch modal */
+        .sw-field-row select {
+            background-image: none;
+            padding-right: 10px;
+        }
+        .sw-field-row input[type="text"]:focus,
+        .sw-field-row input[type="number"]:focus,
+        .sw-field-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-hover); }
         #sw-modal-footer {
             padding: 12px 20px; border-top: 1px solid var(--border);
             display: flex; justify-content: flex-end; gap: 10px;
@@ -743,10 +757,19 @@
             return;
         }
 
-        if (hov) { draggedPoint = hov; if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; status.innerText = t('statEditCable', activeCableIndex + 1); } redraw(); return; }
+        // In measure/scale mode, don't intercept device clicks — let them add points normally.
+        // Only grab devices as draggedPoints in 'none' mode (so they can be moved).
+        if (hov) {
+            if (hov.type === 'device' && mode !== 'none') {
+                // fall through to measure/scale point-adding logic below
+            } else {
+                draggedPoint = hov;
+                if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; status.innerText = t('statEditCable', activeCableIndex + 1); }
+                redraw();
+                return;
+            }
+        }
 
-        // Double-click on switch opens panel (handled separately via dblclick event)
-        
         if (activePlaceDevice && btn === 0) { 
             devices.push({ type: activePlaceDevice, x: wPos.x, y: wPos.y, name: null }); 
             actionHistory.push({ type: 'device' });
@@ -789,26 +812,26 @@
         redraw();
     }
 
-    function handleEnd() { 
-        isPanning = false; 
+    function handleEnd() {
+        isPanning = false;
+        // Single click (no drag) on a switch device → open switch modal
+        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && devices[draggedPoint.index].type === 'switch' && !activePlaceDevice && mode === 'none') {
+            const dev = devices[draggedPoint.index];
+            draggedPoint = null;
+            redraw();
+            openSwitchModal(dev);
+            return;
+        }
         if (draggedPoint) autoSave();
-        draggedPoint = null; 
-        redraw(); 
+        draggedPoint = null;
+        redraw();
     }
 
     canvasContainer.addEventListener('mousedown', e => handleStart(e, false));
     canvasContainer.addEventListener('mousemove', e => handleMove(e, false));
     window.addEventListener('mouseup', handleEnd);
 
-    // Double-click on a switch device opens the switch panel modal
-    canvasContainer.addEventListener('dblclick', e => {
-        if (!img.src || activePlaceDevice) return;
-        const wPos = getWorldPos(e);
-        const hov = findHoveredPoint(wPos);
-        if (hov && hov.type === 'device' && devices[hov.index].type === 'switch') {
-            openSwitchModal(devices[hov.index]);
-        }
-    });
+    // Single-click on a switch device opens the switch panel modal (handled in handleEnd)
 
     canvasContainer.addEventListener('touchstart', e => { if(e.touches.length === 1) handleStart(e, true); }, {passive: true});
     canvasContainer.addEventListener('touchmove', e => { if(e.touches.length === 1) handleMove(e, true); }, {passive: true});

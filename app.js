@@ -86,7 +86,7 @@ const i18n = {
     function updateLanguageUI() {
         document.getElementById('help-text').innerText = t('help');
         document.querySelectorAll('[data-i18n]').forEach(el => el.innerText = t(el.getAttribute('data-i18n')));
-        if (!img.src) status.innerText = t('statLoad');
+        if (!img.src) // status.innerText = t('statLoad');
         redraw();
     }
     document.getElementById('lang-select').addEventListener('change', e => { lang = e.target.value; updateLanguageUI(); });
@@ -96,12 +96,12 @@ const i18n = {
         item.addEventListener('click', () => {
             if(!img.src) return;
             if (activePlaceDevice === item.dataset.type) {
-                activePlaceDevice = null; item.classList.remove('active-place'); status.innerText = t('statScaleSaved');
+                activePlaceDevice = null; item.classList.remove('active-place'); // status.innerText = t('statScaleSaved');
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
                 btnScale.classList.remove('active'); btnMeasure.classList.remove('active');
-                status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
+                // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
     });
@@ -126,7 +126,7 @@ const i18n = {
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
             cameraY = (data.cameraY !== undefined) ? data.cameraY : (canvas.height - img.height * zoom) / 2;
         }
-        status.innerText = t('statLoaded');
+        // status.innerText = t('statLoaded');
         redraw();
     }
 
@@ -153,7 +153,7 @@ const i18n = {
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-            status.innerText = t('statLoaded'); redraw();
+            // status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
     }
 
@@ -505,7 +505,7 @@ const i18n = {
                 const hovPos = hov.type === 'device' ? getDeviceDrawPos(hov.index) : hov.array[hov.index];
                 dragOffsetX = hovPos.x - wPos.x;
                 dragOffsetY = hovPos.y - wPos.y;
-                if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; status.innerText = t('statEditCable', activeCableIndex + 1); }
+                if (hov.type === 'cable') { activeCableIndex = hov.cableIndex; // status.innerText = t('statEditCable', activeCableIndex + 1); }
                 redraw();
                 return;
             }
@@ -716,9 +716,9 @@ const i18n = {
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
 // --- GOMBOK HOZZÁRENDELÉSEI ---
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; status.innerText = t('statScale'); redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); status.innerText = t('statMeasure'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; // status.innerText = t('statScale'); redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); // status.innerText = t('statMeasure'); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; // status.innerText = t('statEditCable', activeCableIndex + 1); redraw(); autoSave(); } });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

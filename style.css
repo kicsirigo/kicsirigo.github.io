@@ -62,7 +62,8 @@
         button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         button.action { background: var(--success); color: var(--bg); border-color: var(--success); }
         button.cable-btn { background: var(--warning); color: #11111b; border-color: var(--warning); }
-        button.cable-btn.active { background: #11111b; color: var(--warning); border: 2px solid var(--warning); transform: scale(0.95); }
+        button.cable-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); transform: scale(0.95); }
+        button.cable-btn.active svg.icon { stroke: var(--bg); }
         button.export-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         button:disabled { background: var(--bg); color: var(--subtext); cursor: not-allowed; opacity: 0.5; transform: none; box-shadow: none; border-color: transparent;}
         

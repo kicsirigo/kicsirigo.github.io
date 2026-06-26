@@ -2,7 +2,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 const i18n = {
         en: {
-            help: "Zoom: Wheel | Pan: Right Click / Drag | Grid Offset: Shift + Drag | Menu: Right Click",
+            help: "",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
             btnNewCable: "New Cable", btnConnect: "Connect", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
@@ -23,7 +23,7 @@ const i18n = {
             promptRename: "Enter a new name for this device:"
         },
         hu: {
-            help: "Nagyítás: Görgő | Mozgatás: Jobb klikk / Húzás | Rács eltolás: Shift + Húzás | Menü: Jobb klikk",
+            help: "",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnConnect: "Összekötés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
@@ -63,7 +63,7 @@ const i18n = {
     const deviceShortnames = { router: 'RT', switch: 'SW', patch: 'PP', ap: 'AP', pc: 'PC', rack: 'RACK' };
 
     let img = new Image();
-    let mode = 'none', connectState = { devA: null, portA: null }, scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = []; 
+    let mode = 'none', connectState = { devA: null, portA: null }, scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = [], redoHistory = [], isUndoingOrRedoing = false; 
     let activeCableIndex = 0, pixelsPerMeter = null;
     let showLayers = true, snapToGrid = false;
     let gridOffsetX = 0, gridOffsetY = 0;
@@ -131,6 +131,8 @@ const i18n = {
         }
         // status.innerText = t('statLoaded');
         redraw();
+        const uploadGrp = document.getElementById('upload-group');
+        if (uploadGrp) uploadGrp.style.display = 'none';
     }
 
     document.getElementById('upload').addEventListener('change', e => {
@@ -160,11 +162,13 @@ const i18n = {
     function loadImageData(src) {
         img.onload = () => {
             resizeCanvas();
-            scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
+            scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; redoHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
             // status.innerText = t('statLoaded'); redraw();
+            const uploadGrp = document.getElementById('upload-group');
+            if (uploadGrp) uploadGrp.style.display = 'none';
         }; img.src = src;
     }
 
@@ -325,6 +329,14 @@ const i18n = {
         if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             if (!btnUndo.disabled) btnUndo.click();
+        }
+    });
+
+    // --- CTRL + Y (REDO) ---
+    window.addEventListener('keydown', e => {
+        if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) {
+            e.preventDefault();
+            performRedo();
         }
     });
 
@@ -737,6 +749,9 @@ const i18n = {
 
     // Auto-save logic
     function autoSave() {
+        if (!isUndoingOrRedoing) {
+            redoHistory = [];
+        }
         if (!img.src) return;
         const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
         if (img.src.length < 1500000) data.imgSrc = img.src;
@@ -773,27 +788,78 @@ const i18n = {
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 
-        const lastAction = actionHistory.pop();
-        if (lastAction) {
-            if (lastAction.type === 'device' && devices.length > 0) {
-                devices.pop();
-            } else if (lastAction.type === 'scale' && scalePoints.length > 0) {
-                scalePoints.pop();
-                pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
-            } else if (lastAction.type === 'cable') {
-                if (cables[lastAction.cableIndex] && cables[lastAction.cableIndex].points.length > 0) {
-                    cables[lastAction.cableIndex].points.pop();
-                } else if (lastAction.cableIndex > 0) {
-                    cables.pop(); 
-                    activeCableIndex--;
+        isUndoingOrRedoing = true;
+        try {
+            const lastAction = actionHistory.pop();
+            if (lastAction) {
+                if (lastAction.type === 'device' && devices.length > 0) {
+                    const popped = devices.pop();
+                    redoHistory.push({ type: 'device', device: popped });
+                } else if (lastAction.type === 'scale' && scalePoints.length > 0) {
+                    const popped = scalePoints.pop();
+                    const oldPixelsPerMeter = pixelsPerMeter;
+                    const oldMode = mode;
+                    redoHistory.push({ type: 'scale', point: popped, pixelsPerMeter: oldPixelsPerMeter, mode: oldMode });
+                    pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
+                } else if (lastAction.type === 'cable') {
+                    if (cables[lastAction.cableIndex] && cables[lastAction.cableIndex].points.length > 0) {
+                        const popped = cables[lastAction.cableIndex].points.pop();
+                        redoHistory.push({ type: 'cablePoint', cableIndex: lastAction.cableIndex, point: popped });
+                    } else if (lastAction.cableIndex > 0) {
+                        const poppedCable = cables.pop();
+                        const oldActiveCableIndex = activeCableIndex;
+                        redoHistory.push({ type: 'cableObject', cableIndex: lastAction.cableIndex, cable: poppedCable, oldActiveCableIndex: oldActiveCableIndex });
+                        activeCableIndex--;
+                    }
                 }
+                redraw(); 
+                autoSave();
             }
-            redraw(); 
-            autoSave();
+        } finally {
+            isUndoingOrRedoing = false;
         }
     });
 
-    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[{ type: selectCableType.value || 'cat6', points: [] }]; devices=[]; actionHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
+    // Globális Redo
+    function performRedo() {
+        isUndoingOrRedoing = true;
+        try {
+            const nextAction = redoHistory.pop();
+            if (nextAction) {
+                if (nextAction.type === 'device') {
+                    devices.push(nextAction.device);
+                    actionHistory.push({ type: 'device' });
+                } else if (nextAction.type === 'scale') {
+                    scalePoints.push(nextAction.point);
+                    actionHistory.push({ type: 'scale' });
+                    if (scalePoints.length === 2) {
+                        btnSetScale.disabled = false;
+                        if (nextAction.pixelsPerMeter !== null) {
+                            pixelsPerMeter = nextAction.pixelsPerMeter;
+                            btnSetScale.disabled = true;
+                            btnScale.classList.remove('active');
+                            mode = nextAction.mode || 'none';
+                        }
+                    }
+                } else if (nextAction.type === 'cablePoint') {
+                    if (cables[nextAction.cableIndex]) {
+                        cables[nextAction.cableIndex].points.push(nextAction.point);
+                        actionHistory.push({ type: 'cable', cableIndex: nextAction.cableIndex });
+                    }
+                } else if (nextAction.type === 'cableObject') {
+                    cables.push(nextAction.cable);
+                    activeCableIndex = nextAction.cableIndex;
+                    actionHistory.push({ type: 'cable', cableIndex: nextAction.cableIndex });
+                }
+                redraw();
+                autoSave();
+            }
+        } finally {
+            isUndoingOrRedoing = false;
+        }
+    }
+
+    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[{ type: selectCableType.value || 'cat6', points: [] }]; devices=[]; actionHistory=[]; redoHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
 
     btnExportPlan.addEventListener('click', () => {
         if (!img.src) return;

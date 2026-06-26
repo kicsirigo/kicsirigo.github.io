@@ -70,12 +70,21 @@
         button.cable-btn.active svg.icon { stroke: var(--bg) !important; }
         button.export-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         button.export-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        button.danger-btn { background: var(--danger); color: var(--bg); border-color: var(--danger); }
+        button.danger-btn:hover:not(:disabled) { background: var(--danger); color: var(--bg); border-color: var(--danger); }
+        button.danger-btn.active { background: var(--danger) !important; color: var(--bg) !important; border-color: var(--danger) !important; transform: scale(0.95); box-shadow: 0 0 10px var(--danger) !important; }
+        button.danger-btn.active:hover:not(:disabled) { background: var(--danger) !important; color: var(--bg) !important; border-color: var(--danger) !important; }
+        button.danger-btn.active svg.icon { stroke: var(--bg) !important; }
         button:disabled { background: var(--bg); color: var(--subtext); cursor: not-allowed; opacity: 0.5; transform: none; box-shadow: none; border-color: transparent;}
         
         svg.icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .active svg.icon { stroke: var(--bg) !important; }
-        .action svg.icon, .export-btn svg.icon { stroke: var(--bg); }
+        .action svg.icon, .export-btn svg.icon, .danger-btn svg.icon { stroke: var(--bg); }
         .cable-btn svg.icon { stroke: #11111b; }
+
+        #canvas-container.delete-mode, #canvas-container.delete-mode canvas {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23d20f39" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>') 12 12, auto !important;
+        }
 
         /* Workspace & Sidebar */
         #workspace { display: flex; flex-grow: 1; position: relative; overflow: hidden; }

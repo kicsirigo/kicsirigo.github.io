@@ -4,7 +4,7 @@ const i18n = {
         en: {
             help: "",
             btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnConnect: "Connect", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
+            btnNewCable: "New Cable", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -25,7 +25,7 @@ const i18n = {
         hu: {
             help: "",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnConnect: "Összekötés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
+            btnNewCable: "Új kábel", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -50,7 +50,7 @@ const i18n = {
     function t(key, arg1 = "") { return i18n[lang][key].replace("{0}", arg1); }
 
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
-    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), selectCableType = document.getElementById('cable-type-select');
+    const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), btnDelete = document.getElementById('btn-delete'), selectCableType = document.getElementById('cable-type-select');
     const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
     const btnExport = document.getElementById('btn-export'), btnExportPlan = document.getElementById('btn-export-plan'), status = document.getElementById('status');
@@ -102,7 +102,7 @@ const i18n = {
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
-                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');
+                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode');
                 // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
@@ -123,7 +123,7 @@ const i18n = {
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -527,6 +527,56 @@ const i18n = {
             return;
         }
 
+        if (mode === 'delete') {
+            if (hov) {
+                if (hov.type === 'device') {
+                    const devId = devices[hov.index].id;
+                    cables = cables.filter(c => c.fromDev !== devId && c.toDev !== devId);
+                    devices.splice(hov.index, 1);
+                } else if (hov.type === 'cable') {
+                    cables[hov.cableIndex].points.splice(hov.index, 1);
+                    if (cables[hov.cableIndex].points.length === 0 && !('fromDev' in cables[hov.cableIndex])) {
+                        cables.splice(hov.cableIndex, 1);
+                        if (cables.length === 0) cables.push({ type: selectCableType.value || 'cat6', points: [] });
+                        activeCableIndex = cables.length - 1;
+                    }
+                } else if (hov.type === 'scale') {
+                    scalePoints.splice(hov.index, 1);
+                    pixelsPerMeter = null;
+                    btnSetScale.disabled = true;
+                    btnScale.classList.add('active');
+                    mode = 'scale';
+                    document.getElementById('canvas-container').classList.remove('delete-mode');
+                    btnDelete.classList.remove('active');
+                }
+                redraw();
+                autoSave();
+            } else {
+                for (let c = cables.length - 1; c >= 0; c--) {
+                    let cableObj = cables[c];
+                    let points = cableObj.points;
+                    let fullCable = points;
+                    if ('fromDev' in cableObj) {
+                        let d1 = devices.find(d => d.id === cableObj.fromDev);
+                        let d2 = devices.find(d => d.id === cableObj.toDev);
+                        if (d1 && d2) fullCable = [{x: d1.x, y: d1.y}, ...points, {x: d2.x, y: d2.y}];
+                    }
+                    for (let i = 1; i < fullCable.length; i++) {
+                        const p1 = fullCable[i-1], p2 = fullCable[i];
+                        if (distToSegment(wPos, p1, p2) < 10 / zoom) {
+                            cables.splice(c, 1);
+                            if (cables.length === 0) cables.push({ type: selectCableType.value || 'cat6', points: [] });
+                            activeCableIndex = cables.length - 1;
+                            redraw();
+                            autoSave();
+                            return;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
         if (btn === 2 || btn === 1 || (btn === 0 && e.ctrlKey) || (!hov && mode === 'none' && !activePlaceDevice)) {
             isPanning = true; panStartX = (isTouch ? e.touches[0].clientX : e.clientX) - cameraX; panStartY = (isTouch ? e.touches[0].clientY : e.clientY) - cameraY;
             return;
@@ -771,7 +821,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
                 redraw();
                 autoSave();
             } else {
@@ -781,10 +831,11 @@ const i18n = {
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnSetScale.disabled = true; redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); redraw(); autoSave(); } });
-    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); redraw(); });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
+    btnDelete.addEventListener('click', () => { mode = 'delete'; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.add('active'); document.getElementById('canvas-container').classList.add('delete-mode'); redraw(); });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

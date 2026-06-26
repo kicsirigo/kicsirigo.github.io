@@ -59,21 +59,22 @@
         select { appearance: none; padding-right: 25px; background: url('data:image/svg+xml;utf8,<svg fill="%237c7f93" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 5px center; background-size: 20px; }
         button:hover:not(:disabled), select:hover, input[type="file"]::file-selector-button:hover { background: var(--border); transform: translateY(-2px); box-shadow: 0 4px 8px var(--shadow); }
         button:active:not(:disabled) { transform: translateY(0); }
-        button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-        button.active:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        button.active { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; }
+        button.active:hover:not(:disabled) { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; }
         button.action { background: var(--success); color: var(--bg); border-color: var(--success); }
         button.action:hover:not(:disabled) { background: var(--success); color: var(--bg); border-color: var(--success); }
         button.cable-btn { background: var(--warning); color: #11111b; border-color: var(--warning); }
         button.cable-btn:hover:not(:disabled) { background: var(--warning); color: #11111b; border-color: var(--warning); }
-        button.cable-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); transform: scale(0.95); }
-        button.cable-btn.active:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-        button.cable-btn.active svg.icon { stroke: var(--bg); }
+        button.cable-btn.active { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; transform: scale(0.95); }
+        button.cable-btn.active:hover:not(:disabled) { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; }
+        button.cable-btn.active svg.icon { stroke: var(--bg) !important; }
         button.export-btn { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         button.export-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); border-color: var(--accent); }
         button:disabled { background: var(--bg); color: var(--subtext); cursor: not-allowed; opacity: 0.5; transform: none; box-shadow: none; border-color: transparent;}
         
         svg.icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-        .active svg.icon, .action svg.icon, .export-btn svg.icon { stroke: var(--bg); }
+        .active svg.icon { stroke: var(--bg) !important; }
+        .action svg.icon, .export-btn svg.icon { stroke: var(--bg); }
         .cable-btn svg.icon { stroke: #11111b; }
 
         /* Workspace & Sidebar */

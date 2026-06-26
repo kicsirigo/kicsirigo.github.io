@@ -102,7 +102,7 @@ const i18n = {
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
-                btnScale.classList.remove('active'); btnMeasure.classList.remove('active');
+                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');
                 // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
@@ -590,6 +590,7 @@ const i18n = {
         else if (mode === 'measure') { 
             cables[activeCableIndex].points.push(applyGridSnap(wPos)); 
             actionHistory.push({ type: 'cable', cableIndex: activeCableIndex });
+            btnNewCable.classList.remove('active');
             redraw(); 
         }
     }
@@ -780,11 +781,10 @@ const i18n = {
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
-// --- GOMBOK HOZZÁRENDELÉSEI ---
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnSetScale.disabled = true; redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; redraw(); autoSave(); } });
-    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); redraw(); });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); redraw(); });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 
@@ -1260,7 +1260,7 @@ const i18n = {
                     if(dA) dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i+1}`;
                     dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA+1}`;
                     connectState = { devA: null, portA: null };
-                    mode = 'none'; btnConnect.classList.remove('active');
+                    mode = 'none'; btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');
                     redraw(); autoSave();
                 }
             };

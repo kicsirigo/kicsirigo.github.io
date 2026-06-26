@@ -338,6 +338,17 @@ const i18n = {
         } else if (e.key === 'Delete') {
             e.preventDefault();
             if (!btnDelete.disabled) btnDelete.click();
+        } else if (e.key === 'Escape' || e.key === 'Esc') {
+            e.preventDefault();
+            mode = 'none';
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode');
+            hidePortPopup();
+            redraw();
         }
     });
 

@@ -847,7 +847,22 @@ const i18n = {
     btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
     btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); autoSave(); } });
     btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
-    btnDelete.addEventListener('click', () => { mode = 'delete'; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.add('active'); document.getElementById('canvas-container').classList.add('delete-mode'); redraw(); });
+    btnDelete.addEventListener('click', () => {
+        if (mode === 'delete') {
+            mode = 'none';
+            btnDelete.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode');
+        } else {
+            mode = 'delete';
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.add('active');
+            document.getElementById('canvas-container').classList.add('delete-mode');
+        }
+        redraw();
+    });
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

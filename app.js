@@ -324,19 +324,20 @@ const i18n = {
         if (!btnUndo.disabled) btnUndo.dispatchEvent(new MouseEvent('click'));
     });
 
-    // --- CTRL + Z (UNDO) ---
+    // --- KEYBOARD SHORTCUTS ---
     window.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) {
+            return;
+        }
         if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             if (!btnUndo.disabled) btnUndo.click();
-        }
-    });
-
-    // --- CTRL + Y (REDO) ---
-    window.addEventListener('keydown', e => {
-        if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) {
+        } else if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) {
             e.preventDefault();
             performRedo();
+        } else if (e.key === 'Delete') {
+            e.preventDefault();
+            if (!btnDelete.disabled) btnDelete.click();
         }
     });
 

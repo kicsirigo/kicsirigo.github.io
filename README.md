@@ -50,7 +50,7 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Click on any port to assign its custom label, VLAN, mode (Access/Trunk/Uplink), connection destination, and notes.
 6. **Manage & Refine**:
    - **Right-Click** (or long tap) on any device or point to rename or delete it.
-   - Press `Ctrl + Z` or click **Undo** to roll back your last action.
+   - Press `Ctrl + Z` or click **Undo** to roll back your last action, or press `Ctrl + Y` to **Redo** a rolled-back action.
    - Toggle **🧲 Grid** to overlay a positioning grid. Hold **Shift** and drag to manually align the grid lines with your floorplan's walls.
 7. **Export & Backup**: 
    - Click **Export PDF** to download your annotated floorplan as a PDF.

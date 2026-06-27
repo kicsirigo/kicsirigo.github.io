@@ -241,32 +241,41 @@ const i18n = {
 
     function findHoveredPoint(wPos) {
         const hit = 18 / zoom;
+        
+        // 1. menet: Minden más eszköz keresése (nem rack)
         for (let i = devices.length - 1; i >= 0; i--) {
-            const pos = getDeviceDrawPos(i);
             const d = devices[i];
+            if (d.type === 'rack') continue;
             
-            if (d.type === 'rack') {
-                const rw = d.width || 50;
-                const rh = d.height || 110;
-                if (wPos.x >= pos.x - rw/2 && wPos.x <= pos.x + rw/2 && wPos.y >= pos.y - rh/2 && wPos.y <= pos.y + rh/2) {
+            const pos = getDeviceDrawPos(i);
+            let stackedRack = null;
+            for (let j = 0; j < devices.length; j++) {
+                if (devices[j].type === 'rack' && Math.abs(devices[j].x - d.x) < 1 && Math.abs(devices[j].y - d.y) < 1) {
+                    stackedRack = devices[j];
+                    break;
+                }
+            }
+            if (stackedRack) {
+                const rw = stackedRack.width || 50;
+                const uw = rw - 10;
+                const uh = 14;
+                if (wPos.x >= pos.x - uw/2 && wPos.x <= pos.x + uw/2 && wPos.y >= pos.y - uh/2 && wPos.y <= pos.y + uh/2) {
                     return { array: devices, index: i, type: 'device' };
                 }
-            } else {
-                let stackedRack = null;
-                for (let j = 0; j < devices.length; j++) {
-                    if (devices[j].type === 'rack' && Math.abs(devices[j].x - d.x) < 1 && Math.abs(devices[j].y - d.y) < 1) {
-                        stackedRack = devices[j];
-                        break;
-                    }
-                }
-                if (stackedRack) {
-                    const rw = stackedRack.width || 50;
-                    const uw = rw - 10;
-                    const uh = 14;
-                    if (wPos.x >= pos.x - uw/2 && wPos.x <= pos.x + uw/2 && wPos.y >= pos.y - uh/2 && wPos.y <= pos.y + uh/2) {
-                        return { array: devices, index: i, type: 'device' };
-                    }
-                }
+            }
+            if (Math.hypot(pos.x - wPos.x, pos.y - wPos.y) < hit) return { array: devices, index: i, type: 'device' };
+        }
+        
+        // 2. menet: Csak a rack szekrények keresése
+        for (let i = devices.length - 1; i >= 0; i--) {
+            const d = devices[i];
+            if (d.type !== 'rack') continue;
+            
+            const pos = getDeviceDrawPos(i);
+            const rw = d.width || 50;
+            const rh = d.height || 110;
+            if (wPos.x >= pos.x - rw/2 && wPos.x <= pos.x + rw/2 && wPos.y >= pos.y - rh/2 && wPos.y <= pos.y + rh/2) {
+                return { array: devices, index: i, type: 'device' };
             }
             if (Math.hypot(pos.x - wPos.x, pos.y - wPos.y) < hit) return { array: devices, index: i, type: 'device' };
         }
@@ -408,24 +417,13 @@ const i18n = {
             document.getElementById('sw-port-editor').style.display = 'none';
             const rackInfo = document.getElementById('sw-rack-info');
             
-            rackInfo.innerHTML = (lang === 'hu' ? 'Ez egy rack szekrény. Állítsd be a méretét, és helyezz el eszközöket azonos pozícióban a térképen.' : 'This is a rack cabinet. Set its size below and stack other devices inside.') + 
-                '<div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center; align-items: center;">' +
-                '<label style="font-weight:bold; color:var(--text);">Width:</label><input type="number" id="rack-width" value="' + (device.width || 50) + '" style="width:70px; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--panel); color:var(--text);">' +
-                '<label style="font-weight:bold; color:var(--text);">Height:</label><input type="number" id="rack-height" value="' + (device.height || 110) + '" style="width:70px; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--panel); color:var(--text);">' +
-                '</div>';
+            rackInfo.innerHTML = lang === 'hu' 
+                ? 'Ez egy rack szekrény. Használd a méretező fogantyút (kis kék kör a jobb alsó sarkában) a térképen, ha át szeretnéd méretezni.' 
+                : 'This is a rack cabinet. Drag the resize handle (blue circle at the bottom-right corner) on the map to resize it.';
                 
             rackInfo.style.display = 'block';
             document.getElementById('sw-btn-clear-port').style.display = 'none';
             document.getElementById('switch-modal-overlay').classList.add('open');
-            
-            document.getElementById('rack-width').addEventListener('change', e => { 
-                switchModalDevice.width = parseFloat(e.target.value) || 50; 
-                redraw(); autoSave(); 
-            });
-            document.getElementById('rack-height').addEventListener('change', e => { 
-                switchModalDevice.height = parseFloat(e.target.value) || 110; 
-                redraw(); autoSave(); 
-            });
             return;
         } else {
             document.getElementById('sw-f-port-count').parentElement.style.display = 'flex';
@@ -634,6 +632,24 @@ const i18n = {
         }
 
         // In measure/scale mode, don't intercept device clicks — let them add points normally.
+        if (mode === 'drag' && btn === 0) {
+            // Check rack resize handles
+            for (let i = devices.length - 1; i >= 0; i--) {
+                const d = devices[i];
+                if (d.type !== 'rack') continue;
+                const pos = getDeviceDrawPos(i);
+                const rw = d.width || 50;
+                const rh = d.height || 110;
+                const handleX = pos.x + rw/2;
+                const handleY = pos.y + rh/2;
+                if (Math.hypot(wPos.x - handleX, wPos.y - handleY) < 12 / zoom) {
+                    draggedPoint = { type: 'rack-resize', index: i };
+                    redraw();
+                    return;
+                }
+            }
+        }
+
         // In measure/scale mode, don't intercept device clicks — let them add points normally.
         // Grab devices/cables as draggedPoints if in 'drag' mode (or scale points in scale mode).
         // Also grab devices in 'none' mode for click/tap to open switch modal (but no movement).
@@ -719,6 +735,24 @@ const i18n = {
         }
         
         if (draggedPoint) {
+            if (draggedPoint.type === 'rack-resize') {
+                hasDragged = true;
+                canvasContainer.classList.add('grabbing');
+                let rawPos = getWorldPos(e);
+                if (isTouch) {
+                    rawPos.y -= 40 / zoom;
+                }
+                let pos = applyGridSnap(rawPos);
+                const d = devices[draggedPoint.index];
+                const centerPos = getDeviceDrawPos(draggedPoint.index);
+                const dx = pos.x - centerPos.x;
+                const dy = pos.y - centerPos.y;
+                d.width = Math.max(30, dx * 2);
+                d.height = Math.max(30, dy * 2);
+                redraw();
+                return;
+            }
+
             let canDrag = (mode === 'drag') || (mode === 'scale' && draggedPoint.type === 'scale');
             if (canDrag) {
                 hasDragged = true;
@@ -741,6 +775,27 @@ const i18n = {
                 draggedPoint.array[draggedPoint.index].x = pos.x; 
                 draggedPoint.array[draggedPoint.index].y = pos.y;
                 if (draggedPoint.type === 'scale' && pixelsPerMeter) { pixelsPerMeter = null; mode = 'scale'; btnScale.classList.add('active'); btnSetScale.disabled = false; }
+            }
+        } else if (mode === 'drag') {
+            let rawPos = getWorldPos(e);
+            let hoveringHandle = false;
+            for (let i = 0; i < devices.length; i++) {
+                const d = devices[i];
+                if (d.type !== 'rack') continue;
+                const pos = getDeviceDrawPos(i);
+                const rw = d.width || 50;
+                const rh = d.height || 110;
+                const handleX = pos.x + rw/2;
+                const handleY = pos.y + rh/2;
+                if (Math.hypot(rawPos.x - handleX, rawPos.y - handleY) < 12 / zoom) {
+                    hoveringHandle = true;
+                    break;
+                }
+            }
+            if (hoveringHandle) {
+                canvasContainer.style.cursor = 'nwse-resize';
+            } else {
+                canvasContainer.style.cursor = '';
             }
         }
         redraw();
@@ -1167,14 +1222,16 @@ const i18n = {
 
 
             // Eszközök rajzolása
-            devices.forEach((d, i) => {
+            const drawDevice = (d, i) => {
                 const pos = getDeviceDrawPos(i);
                 ctx.save(); ctx.translate(pos.x, pos.y);
                 let color = deviceColors[d.type] || '#8aadf4';
                 const shortLabel = d.name || deviceShortnames[d.type] || 'DEV';
                 const radius = 15 / zoom;
 
-                ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
+                let isCurrentDragged = draggedPoint && hasDragged && draggedPoint.index === i;
+                let draggedType = draggedPoint ? draggedPoint.type : '';
+                ctx.globalAlpha = isCurrentDragged && (draggedType === 'device' || draggedType === 'rack-resize') && !isExport ? 0.4 : 1.0;
                 
                 let stackedRack = null;
                 if (d.type !== 'rack') {
@@ -1209,6 +1266,17 @@ const i18n = {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.fillText(shortLabel, 0, -rh/2 - 2/zoom);
+
+                    // Draw resize handle in bottom-right corner
+                    if (mode === 'drag' && !isExport) {
+                        ctx.fillStyle = '#1e66f5';
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 1.5 / zoom;
+                        ctx.beginPath();
+                        ctx.arc(rw/2, rh/2, 6 / zoom, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
                 } else if (stackedRack) {
                     const rw = stackedRack.width || 50;
                     const uw = rw - 10;
@@ -1251,6 +1319,15 @@ const i18n = {
                 }
 
                 ctx.restore();
+            };
+
+            // Draw racks first
+            devices.forEach((d, i) => {
+                if (d.type === 'rack') drawDevice(d, i);
+            });
+            // Draw all other devices
+            devices.forEach((d, i) => {
+                if (d.type !== 'rack') drawDevice(d, i);
             });
         }
 

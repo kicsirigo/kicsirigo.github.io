@@ -408,7 +408,14 @@ const i18n = {
         // Escape: clear modes/selections
         if (e.key === 'Escape' || e.key === 'Esc') {
             e.preventDefault();
-            if (mode !== 'none') {
+            
+            // Clear active place device selection
+            if (activePlaceDevice) {
+                activePlaceDevice = null;
+                document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
+            }
+
+            if (mode !== 'none' || selectedDeviceIds.size > 0) {
                 mode = 'none';
                 btnScale.classList.remove('active');
                 btnMeasure.classList.remove('active');
@@ -420,8 +427,8 @@ const i18n = {
                 document.getElementById('canvas-container').className = ''; // Reset classes/cursors
                 selectedDeviceIds.clear();
                 hidePortPopup();
-                redraw();
             }
+            redraw();
             return;
         }
 

@@ -141,6 +141,13 @@
         .ctx-item:hover { background: var(--bg); }
         .ctx-item.danger { color: var(--danger); }
         .ctx-item.danger svg { stroke: var(--danger); }
+        .ctx-shortcut {
+            margin-left: auto;
+            font-size: 0.8em;
+            color: var(--subtext);
+            padding-left: 20px;
+            font-weight: normal;
+        }
         /* SWITCH PANEL MODAL */
         #switch-modal-overlay {
             display: none; position: fixed; inset: 0;

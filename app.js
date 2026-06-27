@@ -314,12 +314,19 @@ const i18n = {
         if (!e.target.closest('#context-menu')) contextMenu.style.display = 'none';
     });
 
+    function renameDevice(d) {
+        const newName = prompt(t('promptRename'), d.name || deviceShortnames[d.type]);
+        if (newName !== null) { 
+            d.name = newName.trim() === "" ? null : newName; 
+            redraw(); 
+            autoSave(); 
+        }
+    }
+
     document.getElementById('ctx-rename').addEventListener('click', () => {
         contextMenu.style.display = 'none';
         if (activeContextMenuTarget && activeContextMenuTarget.type === 'device') {
-            const d = devices[activeContextMenuTarget.index];
-            const newName = prompt(t('promptRename'), d.name || deviceShortnames[d.type]);
-            if (newName !== null) { d.name = newName.trim() === "" ? null : newName; redraw(); autoSave(); }
+            renameDevice(devices[activeContextMenuTarget.index]);
         }
     });
 
@@ -358,30 +365,112 @@ const i18n = {
 
     // --- KEYBOARD SHORTCUTS ---
     window.addEventListener('keydown', e => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) {
             return;
         }
-        if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+
+        // Ctrl + O: Open layout (even when file choose is hidden)
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+            e.preventDefault();
+            const uploadBtn = document.getElementById('upload');
+            if (uploadBtn) uploadBtn.click();
+            return;
+        }
+
+        // Ctrl + Z: Undo
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             if (!btnUndo.disabled) btnUndo.click();
-        } else if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) {
+            return;
+        }
+
+        // Ctrl + Y: Redo
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
             e.preventDefault();
             performRedo();
-        } else if (e.key === 'Delete') {
+            return;
+        }
+
+        // F2: Rename device
+        if (e.key === 'F2') {
+            e.preventDefault();
+            if (activeContextMenuTarget && activeContextMenuTarget.type === 'device') {
+                renameDevice(devices[activeContextMenuTarget.index]);
+            } else if (mode === 'select' && selectedDeviceIds.size === 1) {
+                const id = [...selectedDeviceIds][0];
+                const d = devices.find(x => x.id === id);
+                if (d) renameDevice(d);
+            }
+            return;
+        }
+
+        // Escape: clear modes/selections
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            e.preventDefault();
+            if (mode !== 'none') {
+                mode = 'none';
+                btnScale.classList.remove('active');
+                btnMeasure.classList.remove('active');
+                btnConnect.classList.remove('active');
+                btnNewCable.classList.remove('active');
+                btnDelete.classList.remove('active');
+                btnDrag.classList.remove('active');
+                btnSelect.classList.remove('active');
+                document.getElementById('canvas-container').className = ''; // Reset classes/cursors
+                selectedDeviceIds.clear();
+                hidePortPopup();
+                redraw();
+            }
+            return;
+        }
+
+        // Mode Keys: S, D, V, M, N, C, E
+        const key = e.key.toLowerCase();
+        if (key === 's') {
+            e.preventDefault();
+            if (!btnScale.disabled) btnScale.click();
+        } else if (key === 'd') {
+            e.preventDefault();
+            if (!btnDrag.disabled) btnDrag.click();
+        } else if (key === 'v') {
+            e.preventDefault();
+            if (!btnSelect.disabled) btnSelect.click();
+        } else if (key === 'm') {
+            e.preventDefault();
+            if (!btnMeasure.disabled) btnMeasure.click();
+        } else if (key === 'n') {
+            e.preventDefault();
+            if (!btnNewCable.disabled) btnNewCable.click();
+        } else if (key === 'c') {
+            e.preventDefault();
+            if (!btnConnect.disabled) btnConnect.click();
+        } else if (key === 'e') {
             e.preventDefault();
             if (!btnDelete.disabled) btnDelete.click();
-        } else if (e.key === 'Escape' || e.key === 'Esc') {
-            e.preventDefault();
-            mode = 'none';
-            btnScale.classList.remove('active');
-            btnMeasure.classList.remove('active');
-            btnConnect.classList.remove('active');
-            btnNewCable.classList.remove('active');
-            btnDelete.classList.remove('active');
-            btnDrag.classList.remove('active');
-            document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
-            hidePortPopup();
-            redraw();
+        }
+        
+        // Delete / Backspace: delete selection
+        else if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (selectedDeviceIds.size > 0) {
+                e.preventDefault();
+                deleteSelectedDevices();
+            } else if (mode === 'delete') {
+                // If in delete mode and pressing delete key on hovered element
+                if (activeContextMenuTarget) {
+                    e.preventDefault();
+                    if (activeContextMenuTarget.type === 'device') {
+                        const devId = devices[activeContextMenuTarget.index].id;
+                        selectedDeviceIds.delete(devId);
+                        cables = cables.filter(c => c.fromDev !== devId && c.toDev !== devId);
+                        devices.splice(activeContextMenuTarget.index, 1);
+                    } else if (activeContextMenuTarget.type === 'cable') {
+                        cables[activeContextMenuTarget.cableIndex].points.splice(activeContextMenuTarget.index, 1);
+                    }
+                    redraw();
+                    autoSave();
+                }
+            }
         }
     });
 
@@ -1221,14 +1310,7 @@ const i18n = {
         autoSave();
     }
 
-    window.addEventListener('keydown', e => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-            if (selectedDeviceIds.size > 0) {
-                deleteSelectedDevices();
-            }
-        }
-    });
+
     
     // Globális Undo
     btnUndo.addEventListener('click', () => { 

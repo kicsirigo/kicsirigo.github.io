@@ -1146,8 +1146,10 @@ const i18n = {
     btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); autoSave(); } });
     btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
     btnDelete.addEventListener('click', () => {
-        if (mode === 'select' && selectedDeviceIds.size > 0) {
-            deleteSelectedDevices();
+        if (mode === 'select') {
+            if (selectedDeviceIds.size > 0) {
+                deleteSelectedDevices();
+            }
             return;
         }
         if (mode === 'delete') {

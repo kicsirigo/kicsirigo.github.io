@@ -452,7 +452,7 @@ const i18n = {
             led.textContent = p;
             led.dataset.port = p;
             const cfg = device.ports[p];
-            if (cfg && (cfg.label || cfg.vlan || cfg.conn || cfg.mode !== 'access')) led.classList.add('has-config');
+            if (cfg && (cfg.label || cfg.vlan || cfg.conn || (cfg.mode && cfg.mode !== 'access'))) led.classList.add('has-config');
             led.addEventListener('click', () => selectSwPort(p, device));
             ledRow.appendChild(led);
         }
@@ -491,7 +491,7 @@ const i18n = {
         if (typeof cfg.label === 'string') cfg.label = cfg.label.trim();
         if (typeof cfg.conn  === 'string') cfg.conn  = cfg.conn.trim();
         if (typeof cfg.notes === 'string') cfg.notes = cfg.notes.trim();
-        const isConfigured = !!(cfg.label || cfg.vlan || cfg.conn || cfg.notes || cfg.mode !== 'access');
+        const isConfigured = !!(cfg.label || cfg.vlan || cfg.conn || cfg.notes || (cfg.mode && cfg.mode !== 'access'));
         if (isConfigured) { switchModalDevice.ports[swSelectedPort] = cfg; }
         else { delete switchModalDevice.ports[swSelectedPort]; }
         const ledEl = document.querySelector(`.sw-port-led[data-port="${swSelectedPort}"]`);
@@ -1380,8 +1380,7 @@ const i18n = {
         
         portPopupGrid.innerHTML = '';
         for (let i = 1; i <= dev.portCount; i++) {
-            if (!dev.ports[i]) dev.ports[i] = {};
-            const p = dev.ports[i];
+            const p = dev.ports[i] || {};
             const btn = document.createElement('div');
             btn.className = 'port-popup-btn' + (p.conn ? ' used' : '');
             btn.innerText = i;
@@ -1402,7 +1401,11 @@ const i18n = {
                     });
                     // Update connection strings
                     const dA = devices.find(d => d.id === connectState.devA);
-                    if(dA) dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i}`;
+                    if (!dev.ports[i]) dev.ports[i] = {};
+                    if (dA) {
+                        if (!dA.ports[connectState.portA]) dA.ports[connectState.portA] = {};
+                        dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i}`;
+                    }
                     dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA}`;
                     connectState = { devA: null, portA: null };
                     mode = 'none'; btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');

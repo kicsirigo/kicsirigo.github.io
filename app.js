@@ -633,19 +633,45 @@ const i18n = {
 
         // In measure/scale mode, don't intercept device clicks — let them add points normally.
         if (mode === 'drag' && btn === 0) {
-            // Check rack resize handles
+            // Check rack resize handles (edges and corners)
             for (let i = devices.length - 1; i >= 0; i--) {
                 const d = devices[i];
                 if (d.type !== 'rack') continue;
                 const pos = getDeviceDrawPos(i);
                 const rw = d.width || 50;
                 const rh = d.height || 110;
-                const handleX = pos.x + rw/2;
-                const handleY = pos.y + rh/2;
-                if (Math.hypot(wPos.x - handleX, wPos.y - handleY) < 12 / zoom) {
-                    draggedPoint = { type: 'rack-resize', index: i };
-                    redraw();
-                    return;
+                
+                const leftBoundary = pos.x - rw/2;
+                const rightBoundary = pos.x + rw/2;
+                const topBoundary = pos.y - rh/2;
+                const bottomBoundary = pos.y + rh/2;
+                
+                const threshold = 10 / zoom;
+                
+                const withinX = (wPos.x >= leftBoundary - threshold) && (wPos.x <= rightBoundary + threshold);
+                const withinY = (wPos.y >= topBoundary - threshold) && (wPos.y <= bottomBoundary + threshold);
+                
+                if (withinX && withinY) {
+                    const nearLeft = Math.abs(wPos.x - leftBoundary) < threshold;
+                    const nearRight = Math.abs(wPos.x - rightBoundary) < threshold;
+                    const nearTop = Math.abs(wPos.y - topBoundary) < threshold;
+                    const nearBottom = Math.abs(wPos.y - bottomBoundary) < threshold;
+                    
+                    if (nearLeft || nearRight || nearTop || nearBottom) {
+                        const edges = {
+                            left: nearLeft,
+                            right: nearRight,
+                            top: nearTop,
+                            bottom: nearBottom
+                        };
+                        const fixed = {
+                            x: nearLeft ? rightBoundary : (nearRight ? leftBoundary : null),
+                            y: nearTop ? bottomBoundary : (nearBottom ? topBoundary : null)
+                        };
+                        draggedPoint = { type: 'rack-resize', index: i, edges, fixed };
+                        redraw();
+                        return;
+                    }
                 }
             }
         }
@@ -737,18 +763,53 @@ const i18n = {
         if (draggedPoint) {
             if (draggedPoint.type === 'rack-resize') {
                 hasDragged = true;
-                canvasContainer.classList.add('grabbing');
                 let rawPos = getWorldPos(e);
                 if (isTouch) {
                     rawPos.y -= 40 / zoom;
                 }
                 let pos = applyGridSnap(rawPos);
                 const d = devices[draggedPoint.index];
-                const centerPos = getDeviceDrawPos(draggedPoint.index);
-                const dx = pos.x - centerPos.x;
-                const dy = pos.y - centerPos.y;
-                d.width = Math.max(30, dx * 2);
-                d.height = Math.max(30, dy * 2);
+                const edges = draggedPoint.edges;
+                const fixed = draggedPoint.fixed;
+                
+                // Adjust cursor type during dragging
+                let cursor = '';
+                if ((edges.left && edges.top) || (edges.right && edges.bottom)) {
+                    cursor = 'nwse-resize';
+                } else if ((edges.right && edges.top) || (edges.left && edges.bottom)) {
+                    cursor = 'nesw-resize';
+                } else if (edges.left || edges.right) {
+                    cursor = 'ew-resize';
+                } else if (edges.top || edges.bottom) {
+                    cursor = 'ns-resize';
+                }
+                canvasContainer.style.cursor = cursor;
+                canvasContainer.classList.add('grabbing');
+                
+                if (edges.left) {
+                    const newLeft = pos.x;
+                    const newWidth = Math.max(30, fixed.x - newLeft);
+                    d.width = newWidth;
+                    d.x = fixed.x - newWidth / 2;
+                } else if (edges.right) {
+                    const newRight = pos.x;
+                    const newWidth = Math.max(30, newRight - fixed.x);
+                    d.width = newWidth;
+                    d.x = fixed.x + newWidth / 2;
+                }
+                
+                if (edges.top) {
+                    const newTop = pos.y;
+                    const newHeight = Math.max(30, fixed.y - newTop);
+                    d.height = newHeight;
+                    d.y = fixed.y - newHeight / 2;
+                } else if (edges.bottom) {
+                    const newBottom = pos.y;
+                    const newHeight = Math.max(30, newBottom - fixed.y);
+                    d.height = newHeight;
+                    d.y = fixed.y + newHeight / 2;
+                }
+                
                 redraw();
                 return;
             }
@@ -779,21 +840,54 @@ const i18n = {
         } else if (mode === 'drag') {
             let rawPos = getWorldPos(e);
             let hoveringHandle = false;
+            let activeEdges = null;
             for (let i = 0; i < devices.length; i++) {
                 const d = devices[i];
                 if (d.type !== 'rack') continue;
                 const pos = getDeviceDrawPos(i);
                 const rw = d.width || 50;
                 const rh = d.height || 110;
-                const handleX = pos.x + rw/2;
-                const handleY = pos.y + rh/2;
-                if (Math.hypot(rawPos.x - handleX, rawPos.y - handleY) < 12 / zoom) {
-                    hoveringHandle = true;
-                    break;
+                
+                const leftBoundary = pos.x - rw/2;
+                const rightBoundary = pos.x + rw/2;
+                const topBoundary = pos.y - rh/2;
+                const bottomBoundary = pos.y + rh/2;
+                
+                const threshold = 10 / zoom;
+                
+                const withinX = (wPos.x >= leftBoundary - threshold) && (wPos.x <= rightBoundary + threshold);
+                const withinY = (wPos.y >= topBoundary - threshold) && (wPos.y <= bottomBoundary + threshold);
+                
+                if (withinX && withinY) {
+                    const nearLeft = Math.abs(rawPos.x - leftBoundary) < threshold;
+                    const nearRight = Math.abs(rawPos.x - rightBoundary) < threshold;
+                    const nearTop = Math.abs(rawPos.y - topBoundary) < threshold;
+                    const nearBottom = Math.abs(rawPos.y - bottomBoundary) < threshold;
+                    
+                    if (nearLeft || nearRight || nearTop || nearBottom) {
+                        hoveringHandle = true;
+                        activeEdges = {
+                            left: nearLeft,
+                            right: nearRight,
+                            top: nearTop,
+                            bottom: nearBottom
+                        };
+                        break;
+                    }
                 }
             }
-            if (hoveringHandle) {
-                canvasContainer.style.cursor = 'nwse-resize';
+            if (hoveringHandle && activeEdges) {
+                let cursor = '';
+                if ((activeEdges.left && activeEdges.top) || (activeEdges.right && activeEdges.bottom)) {
+                    cursor = 'nwse-resize';
+                } else if ((activeEdges.right && activeEdges.top) || (activeEdges.left && activeEdges.bottom)) {
+                    cursor = 'nesw-resize';
+                } else if (activeEdges.left || activeEdges.right) {
+                    cursor = 'ew-resize';
+                } else if (activeEdges.top || activeEdges.bottom) {
+                    cursor = 'ns-resize';
+                }
+                canvasContainer.style.cursor = cursor;
             } else {
                 canvasContainer.style.cursor = '';
             }
@@ -1267,15 +1361,15 @@ const i18n = {
                     ctx.textBaseline = 'bottom';
                     ctx.fillText(shortLabel, 0, -rh/2 - 2/zoom);
 
-                    // Draw resize handle in bottom-right corner
+                    // Draw dashed border to indicate resizing capability in drag mode
                     if (mode === 'drag' && !isExport) {
-                        ctx.fillStyle = '#1e66f5';
-                        ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 1.5 / zoom;
+                        ctx.strokeStyle = '#1e66f5';
+                        ctx.lineWidth = 1 / zoom;
+                        ctx.setLineDash([4 / zoom, 4 / zoom]);
                         ctx.beginPath();
-                        ctx.arc(rw/2, rh/2, 6 / zoom, 0, 2 * Math.PI);
-                        ctx.fill();
+                        ctx.roundRect(-rw/2 - 2/zoom, -rh/2 - 2/zoom, rw + 4/zoom, rh + 4/zoom, 4 / zoom);
                         ctx.stroke();
+                        ctx.setLineDash([]); // Reset line dash to solid
                     }
                 } else if (stackedRack) {
                     const rw = stackedRack.width || 50;

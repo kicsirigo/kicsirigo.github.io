@@ -3,7 +3,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const i18n = {
         en: {
             help: "",
-            btnScale: "Scale", btnSetScale: "Confirm", btnMeasure: "Draw Cables",
+            btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnMeasure: "Draw Cables",
             btnNewCable: "New Cable", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
@@ -24,7 +24,7 @@ const i18n = {
         },
         hu: {
             help: "",
-            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnMeasure: "Kábelezés",
+            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
@@ -50,6 +50,7 @@ const i18n = {
     function t(key, arg1 = "") { return i18n[lang][key].replace("{0}", arg1); }
 
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
+    const btnDrag = document.getElementById('btn-drag');
     const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), btnDelete = document.getElementById('btn-delete'), selectCableType = document.getElementById('cable-type-select');
     const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
@@ -102,7 +103,7 @@ const i18n = {
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
-                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode');
+                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
                 // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
@@ -123,7 +124,7 @@ const i18n = {
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -313,6 +314,8 @@ const i18n = {
             } else if (activeContextMenuTarget.type === 'scale') {
                 scalePoints.splice(activeContextMenuTarget.index, 1);
                 pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
+                btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active');
+                document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
             }
             redraw();
             autoSave();
@@ -346,7 +349,8 @@ const i18n = {
             btnConnect.classList.remove('active');
             btnNewCable.classList.remove('active');
             btnDelete.classList.remove('active');
-            document.getElementById('canvas-container').classList.remove('delete-mode');
+            btnDrag.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
             hidePortPopup();
             redraw();
         }
@@ -595,23 +599,26 @@ const i18n = {
         }
 
         // In measure/scale mode, don't intercept device clicks — let them add points normally.
-        // Only grab devices as draggedPoints in 'none' mode (so they can be moved).
+        // In measure/scale mode, don't intercept device clicks — let them add points normally.
+        // Grab devices/cables as draggedPoints if in 'drag' mode (or scale points in scale mode).
+        // Also grab devices in 'none' mode for click/tap to open switch modal (but no movement).
         if (hov) {
-            if ((hov.type === 'device' && mode !== 'none') || activePlaceDevice) {
-                // fall through to measure/scale point-adding or device placement logic below
-            } else {
+            let canDragOrSelect = (mode === 'drag') || 
+                                  (mode === 'scale' && hov.type === 'scale') || 
+                                  (hov.type === 'device' && mode === 'none');
+            
+            if (canDragOrSelect && !((hov.type === 'device' && mode !== 'none' && mode !== 'drag') || activePlaceDevice)) {
                 draggedPoint = hov;
                 const hovPos = hov.type === 'device' ? getDeviceDrawPos(hov.index) : hov.array[hov.index];
                 dragOffsetX = hovPos.x - wPos.x;
                 dragOffsetY = hovPos.y - wPos.y;
                 if (hov.type === 'cable') { 
                     activeCableIndex = hov.cableIndex; 
-                    // status.innerText = t('statEditCable', activeCableIndex + 1); 
                 }
                 redraw();
                 return;
             }
-        } else if (mode === 'none') {
+        } else if (mode === 'drag') {
             for (let c = cables.length - 1; c >= 0; c--) {
                 let cableObj = cables[c];
                 let points = cableObj.points;
@@ -677,25 +684,29 @@ const i18n = {
         }
         
         if (draggedPoint) {
-            hasDragged = true;
-            let rawPos = getWorldPos(e);
-            
-            // Offset point above finger on touch devices to improve visibility
-            if (isTouch) {
-                rawPos.y -= 40 / zoom;
+            let canDrag = (mode === 'drag') || (mode === 'scale' && draggedPoint.type === 'scale');
+            if (canDrag) {
+                hasDragged = true;
+                canvasContainer.classList.add('grabbing');
+                let rawPos = getWorldPos(e);
+                
+                // Offset point above finger on touch devices to improve visibility
+                if (isTouch) {
+                    rawPos.y -= 40 / zoom;
+                }
+                
+                rawPos.x += dragOffsetX;
+                rawPos.y += dragOffsetY;
+                
+                let pos = applyGridSnap(rawPos);
+                
+                if (draggedPoint.type === 'cable') {
+                    pos = getSnappedPos(pos);
+                }
+                draggedPoint.array[draggedPoint.index].x = pos.x; 
+                draggedPoint.array[draggedPoint.index].y = pos.y;
+                if (draggedPoint.type === 'scale' && pixelsPerMeter) { pixelsPerMeter = null; mode = 'scale'; btnScale.classList.add('active'); btnSetScale.disabled = false; }
             }
-            
-            rawPos.x += dragOffsetX;
-            rawPos.y += dragOffsetY;
-            
-            let pos = applyGridSnap(rawPos);
-            
-            if (draggedPoint.type === 'cable') {
-                pos = getSnappedPos(pos);
-            }
-            draggedPoint.array[draggedPoint.index].x = pos.x; 
-            draggedPoint.array[draggedPoint.index].y = pos.y;
-            if (draggedPoint.type === 'scale' && pixelsPerMeter) { pixelsPerMeter = null; mode = 'scale'; btnScale.classList.add('active'); btnSetScale.disabled = false; }
         }
         redraw();
     }
@@ -703,8 +714,9 @@ const i18n = {
     function handleEnd() {
         isPanning = false;
         isPanningGrid = false;
+        canvasContainer.classList.remove('grabbing');
         // Single click (no drag) on a device → open device modal
-        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && mode === 'none') {
+        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && (mode === 'none' || mode === 'drag')) {
             const dev = devices[draggedPoint.index];
             draggedPoint = null;
             redraw();
@@ -833,7 +845,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = false;
                 redraw();
                 autoSave();
             } else {
@@ -843,10 +855,10 @@ const i18n = {
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); btnSetScale.disabled = true; redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); autoSave(); } });
-    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode'); redraw(); });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); });
     btnDelete.addEventListener('click', () => {
         if (mode === 'delete') {
             mode = 'none';
@@ -858,8 +870,28 @@ const i18n = {
             btnMeasure.classList.remove('active');
             btnConnect.classList.remove('active');
             btnNewCable.classList.remove('active');
+            btnDrag.classList.remove('active');
             btnDelete.classList.add('active');
+            document.getElementById('canvas-container').classList.remove('drag-mode');
             document.getElementById('canvas-container').classList.add('delete-mode');
+        }
+        redraw();
+    });
+    btnDrag.addEventListener('click', () => {
+        if (mode === 'drag') {
+            mode = 'none';
+            btnDrag.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('drag-mode');
+        } else {
+            mode = 'drag';
+            btnDrag.classList.add('active');
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode');
+            document.getElementById('canvas-container').classList.add('drag-mode');
         }
         redraw();
     });
@@ -1062,7 +1094,7 @@ const i18n = {
         if (scalePoints.length > 0) {
             ctx.strokeStyle = '#1e66f5'; ctx.lineWidth = 4 / zoom; ctx.fillStyle = 'white';
             if (scalePoints.length === 2) { ctx.beginPath(); ctx.moveTo(scalePoints[0].x, scalePoints[0].y); ctx.lineTo(scalePoints[1].x, scalePoints[1].y); ctx.stroke(); }
-            scalePoints.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'scale' && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, 8 / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+            scalePoints.forEach((p, i) => { ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'scale' && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, 8 / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
         }
 
         // ponytail: Added showLayers toggle check to support layer visibility
@@ -1091,10 +1123,10 @@ const i18n = {
                 for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y); ctx.stroke();
                 
                 if (!isSmart) {
-                    cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+                    cable.forEach((p, i) => { ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
                 } else {
                     // Only draw bend points (not the endpoints which are anchored to devices)
-                    cableObj.points.forEach((p, i) => { ctx.globalAlpha = draggedPoint && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
+                    cableObj.points.forEach((p, i) => { ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'cable' && draggedPoint.cableIndex === cIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0; ctx.beginPath(); ctx.arc(p.x, p.y, (cIndex === activeCableIndex ? 6 : 4) / zoom, 0, 2*Math.PI); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1.0; });
                 }
             });
 
@@ -1107,7 +1139,7 @@ const i18n = {
                 const shortLabel = d.name || deviceShortnames[d.type] || 'DEV';
                 const radius = 15 / zoom;
 
-                ctx.globalAlpha = draggedPoint && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
+                ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'device' && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
                 
                 let stackedRack = null;
                 if (d.type !== 'rack') {

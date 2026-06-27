@@ -4,14 +4,14 @@ const i18n = {
         en: {
             help: "",
             swDeviceName: "Name:",
-            btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnMeasure: "Draw Cables",
+            btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnSelect: "Select", btnMeasure: "Draw Cables",
             btnNewCable: "New Cable", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
             statScale: "Click both ends of a known wall! (Draggable)",
             statSetScale: "Adjust points, then click 'Confirm'!",
-            statScaleSaved: "Scale saved! Click 'Draw Cables' or drag devices.",
+            statScaleSaved: "Scale saved! Click 'Draw Cables', drag, or select devices.",
             statScaleInvalid: "Invalid value. Try again!",
             statMeasure: "Click along the path! Use 'New Cable' for a new line.",
             statEditCable: "Editing Cable #{0}...",
@@ -26,7 +26,7 @@ const i18n = {
         hu: {
             help: "",
             swDeviceName: "Név:",
-            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnMeasure: "Kábelezés",
+            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnSelect: "Kijelölés", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
@@ -52,7 +52,7 @@ const i18n = {
     function t(key, arg1 = "") { return i18n[lang][key].replace("{0}", arg1); }
 
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
-    const btnDrag = document.getElementById('btn-drag');
+    const btnDrag = document.getElementById('btn-drag'), btnSelect = document.getElementById('btn-multi-select');
     const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), btnDelete = document.getElementById('btn-delete'), selectCableType = document.getElementById('cable-type-select');
     const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
@@ -77,6 +77,7 @@ const i18n = {
     let dragOffsetX = 0, dragOffsetY = 0;
     let lastPinchDistance = null;
     let lastPinchCenter = null;
+    let selectedDeviceIds = new Set(), selectionBox = null, selectionStartPos = null, selectedDeviceOrigPositions = {}, wStartPos = null;
     
     // ponytail: Removed custom crosshair variables
 
@@ -105,7 +106,7 @@ const i18n = {
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
-                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
+                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
                 // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
@@ -140,7 +141,7 @@ const i18n = {
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = (pixelsPerMeter === null);
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -325,6 +326,9 @@ const i18n = {
     document.getElementById('ctx-delete-device').addEventListener('click', () => {
         contextMenu.style.display = 'none';
         if (activeContextMenuTarget && activeContextMenuTarget.type === 'device') { 
+            const devId = devices[activeContextMenuTarget.index].id;
+            selectedDeviceIds.delete(devId);
+            cables = cables.filter(c => c.fromDev !== devId && c.toDev !== devId);
             devices.splice(activeContextMenuTarget.index, 1); 
             redraw(); 
             autoSave();
@@ -626,7 +630,46 @@ const i18n = {
             return;
         }
 
-        if (btn === 2 || btn === 1 || (btn === 0 && e.ctrlKey) || (!hov && mode === 'none' && !activePlaceDevice)) {
+        if (mode === 'select' && btn === 0) {
+            if (hov && hov.type === 'device') {
+                const clickedDev = devices[hov.index];
+                if (!selectedDeviceIds.has(clickedDev.id)) {
+                    if (!e.shiftKey && !e.ctrlKey) {
+                        selectedDeviceIds.clear();
+                    }
+                    selectedDeviceIds.add(clickedDev.id);
+                } else {
+                    if (e.shiftKey || e.ctrlKey) {
+                        selectedDeviceIds.delete(clickedDev.id);
+                        redraw();
+                        return;
+                    }
+                }
+                
+                draggedPoint = { type: 'multi-move' };
+                wStartPos = wPos;
+                selectedDeviceOrigPositions = {};
+                selectedDeviceIds.forEach(id => {
+                    const dev = devices.find(x => x.id === id);
+                    if (dev) {
+                        selectedDeviceOrigPositions[id] = { x: dev.x, y: dev.y };
+                    }
+                });
+                redraw();
+                return;
+            } else {
+                if (!e.shiftKey && !e.ctrlKey) {
+                    selectedDeviceIds.clear();
+                }
+                draggedPoint = { type: 'selection-marquee' };
+                selectionStartPos = wPos;
+                selectionBox = { x1: wPos.x, y1: wPos.y, x2: wPos.x, y2: wPos.y };
+                redraw();
+                return;
+            }
+        }
+
+        if (btn === 2 || btn === 1 || (btn === 0 && e.ctrlKey && mode !== 'select') || (!hov && mode === 'none' && !activePlaceDevice)) {
             isPanning = true; panStartX = (isTouch ? e.touches[0].clientX : e.clientX) - cameraX; panStartY = (isTouch ? e.touches[0].clientY : e.clientY) - cameraY;
             return;
         }
@@ -761,6 +804,49 @@ const i18n = {
         }
         
         if (draggedPoint) {
+            if (draggedPoint.type === 'selection-marquee') {
+                hasDragged = true;
+                let rawPos = getWorldPos(e);
+                selectionBox = { x1: selectionStartPos.x, y1: selectionStartPos.y, x2: rawPos.x, y2: rawPos.y };
+                
+                if (!e.shiftKey && !e.ctrlKey) {
+                    selectedDeviceIds.clear();
+                }
+                const xMin = Math.min(selectionBox.x1, selectionBox.x2);
+                const xMax = Math.max(selectionBox.x1, selectionBox.x2);
+                const yMin = Math.min(selectionBox.y1, selectionBox.y2);
+                const yMax = Math.max(selectionBox.y1, selectionBox.y2);
+                devices.forEach(d => {
+                    if (d.x >= xMin && d.x <= xMax && d.y >= yMin && d.y <= yMax) {
+                        selectedDeviceIds.add(d.id);
+                    }
+                });
+                redraw();
+                return;
+            }
+            if (draggedPoint.type === 'multi-move') {
+                hasDragged = true;
+                canvasContainer.classList.add('grabbing');
+                let rawPos = getWorldPos(e);
+                if (isTouch) {
+                    rawPos.y -= 40 / zoom;
+                }
+                const dx = rawPos.x - wStartPos.x;
+                const dy = rawPos.y - wStartPos.y;
+                
+                selectedDeviceIds.forEach(id => {
+                    const dev = devices.find(x => x.id === id);
+                    if (dev && selectedDeviceOrigPositions[id]) {
+                        const orig = selectedDeviceOrigPositions[id];
+                        const pos = applyGridSnap({ x: orig.x + dx, y: orig.y + dy });
+                        dev.x = pos.x;
+                        dev.y = pos.y;
+                    }
+                });
+                redraw();
+                return;
+            }
+
             if (draggedPoint.type === 'rack-resize') {
                 hasDragged = true;
                 let rawPos = getWorldPos(e);
@@ -899,6 +985,22 @@ const i18n = {
         isPanning = false;
         isPanningGrid = false;
         canvasContainer.classList.remove('grabbing');
+        
+        if (mode === 'select') {
+            if (draggedPoint) {
+                if (draggedPoint.type === 'selection-marquee') {
+                    selectionBox = null;
+                    selectionStartPos = null;
+                }
+                if (hasDragged) {
+                    autoSave();
+                }
+            }
+            draggedPoint = null;
+            redraw();
+            return;
+        }
+        
         // Single click (no drag) on a device → open device modal
         if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && (mode === 'none' || mode === 'drag')) {
             const dev = devices[draggedPoint.index];
@@ -1039,11 +1141,15 @@ const i18n = {
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); btnSetScale.disabled = true; redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); autoSave(); } });
-    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode'); redraw(); });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
     btnDelete.addEventListener('click', () => {
+        if (mode === 'select' && selectedDeviceIds.size > 0) {
+            deleteSelectedDevices();
+            return;
+        }
         if (mode === 'delete') {
             mode = 'none';
             btnDelete.classList.remove('active');
@@ -1055,9 +1161,11 @@ const i18n = {
             btnConnect.classList.remove('active');
             btnNewCable.classList.remove('active');
             btnDrag.classList.remove('active');
+            btnSelect.classList.remove('active');
             btnDelete.classList.add('active');
-            document.getElementById('canvas-container').classList.remove('drag-mode');
+            document.getElementById('canvas-container').classList.remove('drag-mode', 'select-mode');
             document.getElementById('canvas-container').classList.add('delete-mode');
+            selectedDeviceIds.clear();
         }
         redraw();
     });
@@ -1074,10 +1182,50 @@ const i18n = {
             btnConnect.classList.remove('active');
             btnNewCable.classList.remove('active');
             btnDelete.classList.remove('active');
-            document.getElementById('canvas-container').classList.remove('delete-mode');
+            btnSelect.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode', 'select-mode');
             document.getElementById('canvas-container').classList.add('drag-mode');
+            selectedDeviceIds.clear();
         }
         redraw();
+    });
+    btnSelect.addEventListener('click', () => {
+        if (mode === 'select') {
+            mode = 'none';
+            btnSelect.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('select-mode');
+            selectedDeviceIds.clear();
+        } else {
+            mode = 'select';
+            btnSelect.classList.add('active');
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.remove('active');
+            btnDrag.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
+            document.getElementById('canvas-container').classList.add('select-mode');
+        }
+        redraw();
+    });
+
+    function deleteSelectedDevices() {
+        if (selectedDeviceIds.size === 0) return;
+        cables = cables.filter(c => !selectedDeviceIds.has(c.fromDev) && !selectedDeviceIds.has(c.toDev));
+        devices = devices.filter(d => !selectedDeviceIds.has(d.id));
+        selectedDeviceIds.clear();
+        redraw();
+        autoSave();
+    }
+
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            if (selectedDeviceIds.size > 0) {
+                deleteSelectedDevices();
+            }
+        }
     });
     
     // Globális Undo
@@ -1340,6 +1488,16 @@ const i18n = {
                 if (d.type === 'rack') {
                     const rw = d.width || 50;
                     const rh = d.height || 110;
+                    
+                    // Selection highlight
+                    if (selectedDeviceIds.has(d.id)) {
+                        ctx.strokeStyle = 'rgba(30, 102, 245, 0.4)';
+                        ctx.lineWidth = 6 / zoom;
+                        ctx.beginPath();
+                        ctx.roundRect(-rw/2 - 3/zoom, -rh/2 - 3/zoom, rw + 6/zoom, rh + 6/zoom, 4 / zoom);
+                        ctx.stroke();
+                    }
+
                     ctx.fillStyle = theme === 'light' ? '#e6e9ef' : '#1e2030';
                     ctx.strokeStyle = '#494d64';
                     ctx.lineWidth = 3 / zoom;
@@ -1375,6 +1533,16 @@ const i18n = {
                     const rw = stackedRack.width || 50;
                     const uw = rw - 10;
                     const uh = 14;
+
+                    // Selection highlight
+                    if (selectedDeviceIds.has(d.id)) {
+                        ctx.strokeStyle = 'rgba(30, 102, 245, 0.4)';
+                        ctx.lineWidth = 4 / zoom;
+                        ctx.beginPath();
+                        ctx.roundRect(-uw/2 - 2/zoom, -uh/2 - 2/zoom, uw + 4/zoom, uh + 4/zoom, 2 / zoom);
+                        ctx.stroke();
+                    }
+
                     ctx.fillStyle = color;
                     ctx.strokeStyle = theme === 'light' ? '#4c4f69' : '#11111b';
                     ctx.lineWidth = 1.5 / zoom;
@@ -1396,6 +1564,15 @@ const i18n = {
                     ctx.textBaseline = 'middle';
                     ctx.fillText(shortLabel, 0, 0.5 / zoom);
                 } else {
+                    // Selection highlight
+                    if (selectedDeviceIds.has(d.id)) {
+                        ctx.strokeStyle = 'rgba(30, 102, 245, 0.4)';
+                        ctx.lineWidth = 6 / zoom;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, radius + 3/zoom, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+
                     ctx.fillStyle = color;
                     ctx.strokeStyle = theme === 'light' ? '#ffffff' : '#11111b';
                     ctx.lineWidth = 2.5 / zoom;
@@ -1423,6 +1600,22 @@ const i18n = {
             devices.forEach((d, i) => {
                 if (d.type !== 'rack') drawDevice(d, i);
             });
+
+            // Draw marquee selection box
+            if (mode === 'select' && selectionBox) {
+                const x = Math.min(selectionBox.x1, selectionBox.x2);
+                const y = Math.min(selectionBox.y1, selectionBox.y2);
+                const w = Math.abs(selectionBox.x2 - selectionBox.x1);
+                const h = Math.abs(selectionBox.y2 - selectionBox.y1);
+                
+                ctx.fillStyle = 'rgba(30, 102, 245, 0.15)';
+                ctx.strokeStyle = '#1e66f5';
+                ctx.lineWidth = 1.5 / zoom;
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.fill();
+                ctx.stroke();
+            }
         }
 
         // Close camera transform

@@ -88,6 +88,9 @@
         #canvas-container.drag-mode, #canvas-container.drag-mode canvas {
             cursor: grab !important;
         }
+        #canvas-container.select-mode, #canvas-container.select-mode canvas {
+            cursor: crosshair !important;
+        }
         #canvas-container.grabbing, #canvas-container.grabbing canvas {
             cursor: grabbing !important;
         }

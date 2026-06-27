@@ -6,7 +6,7 @@
     <title>Measurer app</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=1.7">
+    <link rel="stylesheet" href="style.css?v=1.8">
 </head>
 <body data-theme="light">
 
@@ -52,6 +52,13 @@
             <button id="btn-drag" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
                 <span data-i18n="btnDrag">Drag</span>
+            </button>
+            <button id="btn-multi-select" disabled>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="13" height="13" rx="1.5" stroke-dasharray="3,3" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                    <path d="M12 12l2.5 7.5 2-2.5 3.5 3.5 1.5-1.5-3.5-3.5 2.5-2z" fill="currentColor"></path>
+                </svg>
+                <span data-i18n="btnSelect">Select</span>
             </button>
             <button id="btn-measure" disabled>
                 <svg class="icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
@@ -213,6 +220,6 @@
     <div class="port-popup-grid" id="port-popup-grid"></div>
 </div>
 
-<script src="app.js?v=1.7"></script>
+<script src="app.js?v=1.8"></script>
 </body>
 </html>

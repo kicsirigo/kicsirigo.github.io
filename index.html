@@ -175,6 +175,10 @@
         <svg id="sw-modal-icon" class="icon" viewBox="0 0 24 24" style="width:20px;height:20px"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="12" x2="22" y2="12"></line><line x1="6" y1="8" x2="6" y2="16"></line><line x1="10" y1="8" x2="10" y2="16"></line><line x1="14" y1="8" x2="14" y2="16"></line><line x1="18" y1="8" x2="18" y2="16"></line></svg>
         <span id="sw-modal-title">Device</span>
         <div style="margin-left: 20px; font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
+            <label data-i18n="swDeviceName">Name:</label>
+            <input type="text" id="sw-device-name" placeholder="Device name" style="width: 120px; padding: 2px 6px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
+        </div>
+        <div id="sw-port-count-container" style="margin-left: 10px; font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
             <label>Ports:</label>
             <input type="number" id="sw-f-port-count" min="1" max="128" value="24" style="width: 50px; padding: 2px; font-size: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px;">
         </div>

@@ -3,6 +3,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const i18n = {
         en: {
             help: "",
+            swDeviceName: "Name:",
             btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnMeasure: "Draw Cables",
             btnNewCable: "New Cable", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
@@ -24,6 +25,7 @@ const i18n = {
         },
         hu: {
             help: "",
+            swDeviceName: "Név:",
             btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnMeasure: "Kábelezés",
             btnNewCable: "Új kábel", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
@@ -372,6 +374,8 @@ const i18n = {
         if (!device.portCount) device.portCount = getDefaultPortCount(device.type);
         swSelectedPort = null;
         
+        document.getElementById('sw-device-name').value = device.name || '';
+        
         let titleType = device.type.charAt(0).toUpperCase() + device.type.slice(1);
         if (device.type === 'patch') titleType = 'Patch Panel';
         if (device.type === 'patchpanel') titleType = 'Patch Panel';
@@ -494,6 +498,21 @@ const i18n = {
         switchModalDevice.portCount = count;
         buildSwitchFaceplate(switchModalDevice);
         if (swSelectedPort > count) showSwEditor(null);
+    });
+
+    document.getElementById('sw-device-name').addEventListener('input', e => {
+        if (!switchModalDevice) return;
+        const val = e.target.value.trim();
+        switchModalDevice.name = val === '' ? null : val;
+        
+        let titleType = switchModalDevice.type.charAt(0).toUpperCase() + switchModalDevice.type.slice(1);
+        if (switchModalDevice.type === 'patch') titleType = 'Patch Panel';
+        if (switchModalDevice.type === 'patchpanel') titleType = 'Patch Panel';
+        if (switchModalDevice.type === 'rack') titleType = 'Rack Cabinet';
+        document.getElementById('sw-modal-title').textContent = switchModalDevice.name || titleType;
+        
+        redraw();
+        autoSave();
     });
 
     document.getElementById('sw-btn-clear-port').addEventListener('click', () => {

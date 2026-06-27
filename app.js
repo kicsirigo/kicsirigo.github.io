@@ -500,7 +500,7 @@ const i18n = {
         if (swSelectedPort > count) showSwEditor(null);
     });
 
-    document.getElementById('sw-device-name').addEventListener('input', e => {
+    const handleDeviceNameChange = e => {
         if (!switchModalDevice) return;
         const val = e.target.value.trim();
         switchModalDevice.name = val === '' ? null : val;
@@ -513,7 +513,9 @@ const i18n = {
         
         redraw();
         autoSave();
-    });
+    };
+    document.getElementById('sw-device-name').addEventListener('input', handleDeviceNameChange);
+    document.getElementById('sw-device-name').addEventListener('change', handleDeviceNameChange);
 
     document.getElementById('sw-btn-clear-port').addEventListener('click', () => {
         if (swSelectedPort === null || !switchModalDevice) return;

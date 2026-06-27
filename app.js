@@ -120,7 +120,21 @@ const i18n = {
         let loadedCables = data.cables || [{ type: 'cat6', points: [] }];
         cables = loadedCables.map(c => Array.isArray(c) ? { type: 'default', points: c } : c);
         devices = data.devices || [];
-        devices.forEach(d => { if (!d.id) d.id = Math.random().toString(36).substr(2, 9); });
+        devices.forEach(d => { 
+            if (!d.id) d.id = Math.random().toString(36).substr(2, 9); 
+            if (d.ports && d.ports[0] !== undefined) {
+                const newPorts = {};
+                for (let k in d.ports) {
+                    const num = parseInt(k);
+                    if (!isNaN(num)) {
+                        newPorts[num + 1] = d.ports[k];
+                    } else {
+                        newPorts[k] = d.ports[k];
+                    }
+                }
+                d.ports = newPorts;
+            }
+        });
         pixelsPerMeter = data.pixelsPerMeter || null;
         gridOffsetX = data.gridOffsetX || 0;
         gridOffsetY = data.gridOffsetY || 0;
@@ -1365,12 +1379,12 @@ const i18n = {
         if (!dev.portCount) dev.portCount = getDefaultPortCount(dev.type);
         
         portPopupGrid.innerHTML = '';
-        for (let i = 0; i < dev.portCount; i++) {
+        for (let i = 1; i <= dev.portCount; i++) {
             if (!dev.ports[i]) dev.ports[i] = {};
             const p = dev.ports[i];
             const btn = document.createElement('div');
             btn.className = 'port-popup-btn' + (p.conn ? ' used' : '');
-            btn.innerText = i + 1;
+            btn.innerText = i;
             btn.onclick = () => {
                 if (p.conn) return; // already used
                 hidePortPopup();
@@ -1388,8 +1402,8 @@ const i18n = {
                     });
                     // Update connection strings
                     const dA = devices.find(d => d.id === connectState.devA);
-                    if(dA) dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i+1}`;
-                    dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA+1}`;
+                    if(dA) dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i}`;
+                    dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA}`;
                     connectState = { devA: null, portA: null };
                     mode = 'none'; btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');
                     redraw(); autoSave();

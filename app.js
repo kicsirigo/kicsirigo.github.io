@@ -141,7 +141,7 @@ const i18n = {
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = (pixelsPerMeter === null);
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -184,6 +184,7 @@ const i18n = {
             zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
             btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
+            btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
             // status.innerText = t('statLoaded'); redraw();
             const uploadGrp = document.getElementById('upload-group');
             if (uploadGrp) uploadGrp.style.display = 'none';
@@ -1098,7 +1099,7 @@ const i18n = {
         }
         
         // Single click (no drag) on a device → open device modal
-        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && (mode === 'none' || mode === 'drag')) {
+        if (draggedPoint && !hasDragged && draggedPoint.type === 'device' && !activePlaceDevice && mode === 'none') {
             const dev = devices[draggedPoint.index];
             draggedPoint = null;
             redraw();
@@ -1227,7 +1228,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
                 redraw();
                 autoSave();
             } else {

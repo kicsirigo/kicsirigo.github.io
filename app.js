@@ -2124,16 +2124,63 @@ const i18n = {
                     connectState.devA = dev.id;
                     connectState.portA = i;
                 } else {
-                    if (connectState.devA === dev.id) return; // same device
+                    // Find positions of both devices and auto-route via wire-way if one is nearby
+                    const dA = devices.find(d => d.id === connectState.devA);
+                    const dB = dev;
+                    let cablePoints = [];
+                    if (dA && dB) {
+                        const xA = dA.x, yA = dA.y;
+                        const xB = dB.x, yB = dB.y;
+                        
+                        let bestWireway = null;
+                        let bestStartIdx = -1;
+                        let bestEndIdx = -1;
+                        let bestScore = Infinity;
+                        
+                        wireways.forEach(W => {
+                            if (W.points.length < 2) return;
+                            let startIdx = -1, startDist = Infinity;
+                            let endIdx = -1, endDist = Infinity;
+                            for (let j = 0; j < W.points.length; j++) {
+                                let distA = Math.hypot(W.points[j].x - xA, W.points[j].y - yA);
+                                if (distA < startDist) {
+                                    startDist = distA;
+                                    startIdx = j;
+                                }
+                                let distB = Math.hypot(W.points[j].x - xB, W.points[j].y - yB);
+                                if (distB < endDist) {
+                                    endDist = distB;
+                                    endIdx = j;
+                                }
+                            }
+                            if (startDist < 300 && endDist < 300) {
+                                let score = startDist + endDist;
+                                if (score < bestScore) {
+                                    bestScore = score;
+                                    bestWireway = W;
+                                    bestStartIdx = startIdx;
+                                    bestEndIdx = endIdx;
+                                }
+                            }
+                        });
+                        
+                        if (bestWireway) {
+                            if (bestStartIdx <= bestEndIdx) {
+                                cablePoints = bestWireway.points.slice(bestStartIdx, bestEndIdx + 1).map(p => ({ x: p.x, y: p.y }));
+                            } else {
+                                cablePoints = bestWireway.points.slice(bestEndIdx, bestStartIdx + 1).map(p => ({ x: p.x, y: p.y })).reverse();
+                            }
+                        }
+                    }
+
                     // Create smart cable
                     cables.push({
                         type: selectCableType.value || 'cat6',
                         fromDev: connectState.devA, fromPort: connectState.portA,
                         toDev: dev.id, toPort: i,
-                        points: [] // intermediate points
+                        points: cablePoints
                     });
                     // Update connection strings
-                    const dA = devices.find(d => d.id === connectState.devA);
                     if (!dev.ports[i]) dev.ports[i] = {};
                     if (dA) {
                         if (!dA.ports[connectState.portA]) dA.ports[connectState.portA] = {};

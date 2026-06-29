@@ -1617,7 +1617,7 @@ const i18n = {
     btnExportPlan.addEventListener('click', () => {
         if (!img.src) return;
         const data = { scalePoints, cables, devices, wireways, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
-        if (img.src.length < 1500000) data.imgSrc = img.src;
+        data.imgSrc = img.src;
         const jsonStr = JSON.stringify(data);
         const blob = new Blob([jsonStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);

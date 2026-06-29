@@ -4,8 +4,8 @@ const i18n = {
         en: {
             help: "",
             swDeviceName: "Name:",
-            btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnSelect: "Select", btnMeasure: "Draw Cables",
-            btnNewCable: "New Cable", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
+            btnScale: "Scale", btnSetScale: "Confirm", btnDrag: "Drag", btnSelect: "Select", btnMeasure: "Draw Cables", btnWireway: "Wire-way",
+            btnNewCable: "New Cable", btnNewWireway: "New Wire-way", btnConnect: "Connect", btnDelete: "Delete", selectPort: "Select Port", statConnect: "Click Device A, then Device B to link ports", btnUndo: "Undo", btnClear: "Clear All", btnExport: "Export PDF", btnExportPlan: "Save .plan",
             sideTitle: "Devices",
             statLoad: "Load a PDF or Image floorplan!",
             statLoaded: "Loaded. Click 'Scale' to begin!",
@@ -26,8 +26,8 @@ const i18n = {
         hu: {
             help: "",
             swDeviceName: "Név:",
-            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnSelect: "Kijelölés", btnMeasure: "Kábelezés",
-            btnNewCable: "Új kábel", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
+            btnScale: "Méretarány", btnSetScale: "Véglegesítés", btnDrag: "Mozgatás", btnSelect: "Kijelölés", btnMeasure: "Kábelezés", btnWireway: "Nyomvonal",
+            btnNewCable: "Új kábel", btnNewWireway: "Új nyomvonal", btnConnect: "Összekötés", btnDelete: "Törlés", selectPort: "Válassz Portot", statConnect: "Kattints az A eszközre, majd a B eszközre", btnUndo: "Vissza", btnClear: "Minden törlése", btnExport: "PDF Export", btnExportPlan: "Mentés .plan",
             sideTitle: "Eszközök",
             statLoad: "Tölts be egy PDF-et vagy képet!",
             statLoaded: "Betöltve. Kattints a 'Méretarány' gombra!",
@@ -54,6 +54,7 @@ const i18n = {
     const btnScale = document.getElementById('btn-scale'), btnSetScale = document.getElementById('btn-set-scale');
     const btnDrag = document.getElementById('btn-drag'), btnSelect = document.getElementById('btn-multi-select');
     const btnMeasure = document.getElementById('btn-measure'), btnNewCable = document.getElementById('btn-new-cable'), btnConnect = document.getElementById('btn-connect'), btnDelete = document.getElementById('btn-delete'), selectCableType = document.getElementById('cable-type-select');
+    const btnWireway = document.getElementById('btn-wireway'), btnNewWireway = document.getElementById('btn-new-wireway');
     const CABLE_TYPES = { 'default': { color: '#f5bde6', name: 'Default' }, 'cat5e': { color: '#8aadf4', name: 'Cat5e' }, 'cat6': { color: '#a6da95', name: 'Cat6' }, 'cat6a': { color: '#c6a0f6', name: 'Cat6a' }, 'fiber': { color: '#f5a97f', name: 'Fiber' }, 'power': { color: '#ed8796', name: 'Power' } };
     const btnUndo = document.getElementById('btn-undo'), btnClear = document.getElementById('btn-clear');
     const btnExport = document.getElementById('btn-export'), btnExportPlan = document.getElementById('btn-export-plan'), status = document.getElementById('status');
@@ -67,7 +68,8 @@ const i18n = {
 
     let img = new Image();
     let mode = 'none', connectState = { devA: null, portA: null }, scalePoints = [], cables = [{ type: 'cat6', points: [] }], devices = [], actionHistory = [], redoHistory = [], isUndoingOrRedoing = false; 
-    let activeCableIndex = 0, pixelsPerMeter = null;
+    let wireways = [{ points: [] }];
+    let activeCableIndex = 0, activeWirewayIndex = 0, pixelsPerMeter = null;
     let showLayers = true, snapToGrid = false;
     let gridOffsetX = 0, gridOffsetY = 0;
 
@@ -107,7 +109,7 @@ const i18n = {
             } else {
                 document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active-place'));
                 activePlaceDevice = item.dataset.type; item.classList.add('active-place'); mode = 'none';
-                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
+                btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
                 // status.innerText = t('statPlaceDevice', item.dataset.type.toUpperCase());
             }
         });
@@ -141,8 +143,10 @@ const i18n = {
         gridOffsetX = data.gridOffsetX || 0;
         gridOffsetY = data.gridOffsetY || 0;
         activeCableIndex = cables.length - 1;
+        wireways = data.wireways || [{ points: [] }];
+        activeWirewayIndex = wireways.length - 1;
         btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
+        btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = btnWireway.disabled = btnNewWireway.disabled = false;
         if (resetCamera) {
             zoom = data.zoom || Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
             cameraX = (data.cameraX !== undefined) ? data.cameraX : (canvas.width - img.width * zoom) / 2;
@@ -192,11 +196,11 @@ const i18n = {
                 restoreState(pendingPlanData, true);
                 pendingPlanData = null;
             } else {
-                scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; redoHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
+                scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; wireways = [{ points: [] }]; actionHistory = []; redoHistory = []; activeCableIndex = 0; activeWirewayIndex = 0; pixelsPerMeter = null; mode = 'none';
                 zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
                 cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
                 btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = btnWireway.disabled = btnNewWireway.disabled = false;
             }
             // status.innerText = t('statLoaded'); redraw();
         }; img.src = src;
@@ -294,6 +298,7 @@ const i18n = {
         }
         for (let i = 0; i < scalePoints.length; i++) if (Math.hypot(scalePoints[i].x - wPos.x, scalePoints[i].y - wPos.y) < hit) return { array: scalePoints, index: i, type: 'scale' };
         for (let c = cables.length - 1; c >= 0; c--) for (let i = 0; i < cables[c].points.length; i++) if (Math.hypot(cables[c].points[i].x - wPos.x, cables[c].points[i].y - wPos.y) < hit) return { array: cables[c].points, index: i, type: 'cable', cableIndex: c };
+        for (let w = wireways.length - 1; w >= 0; w--) for (let i = 0; i < wireways[w].points.length; i++) if (Math.hypot(wireways[w].points[i].x - wPos.x, wireways[w].points[i].y - wPos.y) < hit) return { array: wireways[w].points, index: i, type: 'wireway', wirewayIndex: w };
         return null;
     }
 
@@ -313,7 +318,7 @@ const i18n = {
         if (hov && hov.type === 'device') {
             document.getElementById('ctx-rename').style.display = 'flex';
             document.getElementById('ctx-delete-device').style.display = 'flex';
-        } else if (hov && (hov.type === 'cable' || hov.type === 'scale')) {
+        } else if (hov && (hov.type === 'cable' || hov.type === 'scale' || hov.type === 'wireway')) {
             document.getElementById('ctx-delete-point').style.display = 'flex';
         }
         
@@ -359,6 +364,13 @@ const i18n = {
         if (activeContextMenuTarget) {
             if (activeContextMenuTarget.type === 'cable') {
                 cables[activeContextMenuTarget.cableIndex].points.splice(activeContextMenuTarget.index, 1);
+            } else if (activeContextMenuTarget.type === 'wireway') {
+                wireways[activeContextMenuTarget.wirewayIndex].points.splice(activeContextMenuTarget.index, 1);
+                if (wireways[activeContextMenuTarget.wirewayIndex].points.length === 0) {
+                    wireways.splice(activeContextMenuTarget.wirewayIndex, 1);
+                    if (wireways.length === 0) wireways.push({ points: [] });
+                    activeWirewayIndex = wireways.length - 1;
+                }
             } else if (activeContextMenuTarget.type === 'scale') {
                 scalePoints.splice(activeContextMenuTarget.index, 1);
                 pixelsPerMeter = null; btnSetScale.disabled = true; btnScale.classList.add('active'); mode = 'scale';
@@ -431,6 +443,8 @@ const i18n = {
                 mode = 'none';
                 btnScale.classList.remove('active');
                 btnMeasure.classList.remove('active');
+                btnWireway.classList.remove('active');
+                btnNewWireway.classList.remove('active');
                 btnConnect.classList.remove('active');
                 btnNewCable.classList.remove('active');
                 btnDelete.classList.remove('active');
@@ -467,6 +481,12 @@ const i18n = {
         } else if (key === 'e') {
             e.preventDefault();
             if (!btnDelete.disabled) btnDelete.click();
+        } else if (key === 'w') {
+            e.preventDefault();
+            if (!btnWireway.disabled) btnWireway.click();
+        } else if (key === 'q') {
+            e.preventDefault();
+            if (!btnNewWireway.disabled) btnNewWireway.click();
         }
         
         // Delete / Backspace: delete selection
@@ -485,6 +505,13 @@ const i18n = {
                         devices.splice(activeContextMenuTarget.index, 1);
                     } else if (activeContextMenuTarget.type === 'cable') {
                         cables[activeContextMenuTarget.cableIndex].points.splice(activeContextMenuTarget.index, 1);
+                    } else if (activeContextMenuTarget.type === 'wireway') {
+                        wireways[activeContextMenuTarget.wirewayIndex].points.splice(activeContextMenuTarget.index, 1);
+                        if (wireways[activeContextMenuTarget.wirewayIndex].points.length === 0) {
+                            wireways.splice(activeContextMenuTarget.wirewayIndex, 1);
+                            if (wireways.length === 0) wireways.push({ points: [] });
+                            activeWirewayIndex = wireways.length - 1;
+                        }
                     }
                     redraw();
                     autoSave();
@@ -701,6 +728,13 @@ const i18n = {
                         if (cables.length === 0) cables.push({ type: selectCableType.value || 'cat6', points: [] });
                         activeCableIndex = cables.length - 1;
                     }
+                } else if (hov.type === 'wireway') {
+                    wireways[hov.wirewayIndex].points.splice(hov.index, 1);
+                    if (wireways[hov.wirewayIndex].points.length === 0) {
+                        wireways.splice(hov.wirewayIndex, 1);
+                        if (wireways.length === 0) wireways.push({ points: [] });
+                        activeWirewayIndex = wireways.length - 1;
+                    }
                 } else if (hov.type === 'scale') {
                     scalePoints.splice(hov.index, 1);
                     pixelsPerMeter = null;
@@ -728,6 +762,20 @@ const i18n = {
                             cables.splice(c, 1);
                             if (cables.length === 0) cables.push({ type: selectCableType.value || 'cat6', points: [] });
                             activeCableIndex = cables.length - 1;
+                            redraw();
+                            autoSave();
+                            return;
+                        }
+                    }
+                }
+                for (let w = wireways.length - 1; w >= 0; w--) {
+                    let points = wireways[w].points;
+                    for (let i = 1; i < points.length; i++) {
+                        const p1 = points[i-1], p2 = points[i];
+                        if (distToSegment(wPos, p1, p2) < 10 / zoom) {
+                            wireways.splice(w, 1);
+                            if (wireways.length === 0) wireways.push({ points: [] });
+                            activeWirewayIndex = wireways.length - 1;
                             redraw();
                             autoSave();
                             return;
@@ -843,6 +891,9 @@ const i18n = {
                 if (hov.type === 'cable') { 
                     activeCableIndex = hov.cableIndex; 
                 }
+                if (hov.type === 'wireway') {
+                    activeWirewayIndex = hov.wirewayIndex;
+                }
                 redraw();
                 return;
             }
@@ -863,6 +914,20 @@ const i18n = {
                         cableObj.points.splice(insertIdx, 0, {x: wPos.x, y: wPos.y});
                         draggedPoint = { array: cableObj.points, index: insertIdx, type: 'cable', cableIndex: c };
                         activeCableIndex = c;
+                        autoSave();
+                        return;
+                    }
+                }
+            }
+            for (let w = wireways.length - 1; w >= 0; w--) {
+                let wirewayObj = wireways[w];
+                let points = wirewayObj.points;
+                for (let i = 1; i < points.length; i++) {
+                    const p1 = points[i-1], p2 = points[i];
+                    if (distToSegment(wPos, p1, p2) < 10 / zoom) {
+                        wirewayObj.points.splice(i, 0, {x: wPos.x, y: wPos.y});
+                        draggedPoint = { array: wirewayObj.points, index: i, type: 'wireway', wirewayIndex: w };
+                        activeWirewayIndex = w;
                         autoSave();
                         return;
                     }
@@ -889,6 +954,12 @@ const i18n = {
             actionHistory.push({ type: 'cable', cableIndex: activeCableIndex });
             btnNewCable.classList.remove('active');
             redraw(); 
+        }
+        else if (mode === 'wireway') {
+            wireways[activeWirewayIndex].points.push(applyGridSnap(wPos));
+            actionHistory.push({ type: 'wireway', wirewayIndex: activeWirewayIndex });
+            btnNewWireway.classList.remove('active');
+            redraw();
         }
     }
 
@@ -1222,7 +1293,7 @@ const i18n = {
             redoHistory = [];
         }
         if (!img.src) return;
-        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
+        const data = { scalePoints, cables, devices, wireways, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
         if (img.src.length < 1500000) data.imgSrc = img.src;
         localStorage.setItem('measurer_workspace', JSON.stringify(data));
     }
@@ -1239,7 +1310,7 @@ const i18n = {
                 btnSetScale.disabled = true;
                 btnScale.classList.remove('active');
                 mode = 'none';
-                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnUndo.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = btnWireway.disabled = btnNewWireway.disabled = false;
                 redraw();
                 autoSave();
             } else {
@@ -1249,10 +1320,10 @@ const i18n = {
     });
 
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
-    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); btnSetScale.disabled = true; redraw(); });
-    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); autoSave(); } });
-    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
+    btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); btnSetScale.disabled = true; redraw(); });
+    btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
+    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); autoSave(); } });
+    btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
     btnDelete.addEventListener('click', () => {
         if (mode === 'select') {
             if (selectedDeviceIds.size > 0) {
@@ -1272,6 +1343,8 @@ const i18n = {
             btnNewCable.classList.remove('active');
             btnDrag.classList.remove('active');
             btnSelect.classList.remove('active');
+            btnWireway.classList.remove('active');
+            btnNewWireway.classList.remove('active');
             btnDelete.classList.add('active');
             document.getElementById('canvas-container').classList.remove('drag-mode', 'select-mode');
             document.getElementById('canvas-container').classList.add('delete-mode');
@@ -1293,6 +1366,8 @@ const i18n = {
             btnNewCable.classList.remove('active');
             btnDelete.classList.remove('active');
             btnSelect.classList.remove('active');
+            btnWireway.classList.remove('active');
+            btnNewWireway.classList.remove('active');
             document.getElementById('canvas-container').classList.remove('delete-mode', 'select-mode');
             document.getElementById('canvas-container').classList.add('drag-mode');
             selectedDeviceIds.clear();
@@ -1314,10 +1389,52 @@ const i18n = {
             btnNewCable.classList.remove('active');
             btnDelete.classList.remove('active');
             btnDrag.classList.remove('active');
+            btnWireway.classList.remove('active');
+            btnNewWireway.classList.remove('active');
             document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode');
             document.getElementById('canvas-container').classList.add('select-mode');
         }
         redraw();
+    });
+
+    btnWireway.addEventListener('click', () => {
+        if (mode === 'wireway') {
+            mode = 'none';
+            btnWireway.classList.remove('active');
+        } else {
+            mode = 'wireway';
+            btnWireway.classList.add('active');
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.remove('active');
+            btnDrag.classList.remove('active');
+            btnSelect.classList.remove('active');
+            btnNewWireway.classList.remove('active');
+            document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
+            selectedDeviceIds.clear();
+        }
+        redraw();
+    });
+
+    btnNewWireway.addEventListener('click', () => {
+        if (wireways[activeWirewayIndex].points.length > 0) {
+            wireways.push({ points: [] });
+            activeWirewayIndex = wireways.length - 1;
+            btnNewWireway.classList.add('active');
+            btnWireway.classList.add('active');
+            btnScale.classList.remove('active');
+            btnMeasure.classList.remove('active');
+            btnConnect.classList.remove('active');
+            btnNewCable.classList.remove('active');
+            btnDelete.classList.remove('active');
+            btnDrag.classList.remove('active');
+            btnSelect.classList.remove('active');
+            selectedDeviceIds.clear();
+            redraw();
+            autoSave();
+        }
     });
 
     function deleteSelectedDevices() {
@@ -1340,6 +1457,16 @@ const i18n = {
                 if (lastAction.type === 'device' && devices.length > 0) {
                     const popped = devices.pop();
                     redoHistory.push({ type: 'device', device: popped });
+                } else if (lastAction.type === 'wireway') {
+                    if (wireways[lastAction.wirewayIndex] && wireways[lastAction.wirewayIndex].points.length > 0) {
+                        const popped = wireways[lastAction.wirewayIndex].points.pop();
+                        redoHistory.push({ type: 'wirewayPoint', wirewayIndex: lastAction.wirewayIndex, point: popped });
+                    } else if (lastAction.wirewayIndex > 0) {
+                        const poppedWireway = wireways.pop();
+                        const oldActiveWirewayIndex = activeWirewayIndex;
+                        redoHistory.push({ type: 'wirewayObject', wirewayIndex: lastAction.wirewayIndex, wireway: poppedWireway, oldActiveWirewayIndex: oldActiveWirewayIndex });
+                        activeWirewayIndex--;
+                    }
                 } else if (lastAction.type === 'scale' && scalePoints.length > 0) {
                     const popped = scalePoints.pop();
                     const oldPixelsPerMeter = pixelsPerMeter;
@@ -1374,6 +1501,13 @@ const i18n = {
                 if (nextAction.type === 'device') {
                     devices.push(nextAction.device);
                     actionHistory.push({ type: 'device' });
+                } else if (nextAction.type === 'wirewayPoint') {
+                    wireways[nextAction.wirewayIndex].points.push(nextAction.point);
+                    actionHistory.push({ type: 'wireway', wirewayIndex: nextAction.wirewayIndex });
+                } else if (nextAction.type === 'wirewayObject') {
+                    wireways.push(nextAction.wireway);
+                    activeWirewayIndex = nextAction.wirewayIndex;
+                    actionHistory.push({ type: 'wireway', wirewayIndex: nextAction.wirewayIndex });
                 } else if (nextAction.type === 'scale') {
                     scalePoints.push(nextAction.point);
                     actionHistory.push({ type: 'scale' });
@@ -1404,11 +1538,11 @@ const i18n = {
         }
     }
 
-    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[{ type: selectCableType.value || 'cat6', points: [] }]; devices=[]; actionHistory=[]; redoHistory=[]; activeCableIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
+    btnClear.addEventListener('click', () => { if(confirm(t('confirmClear'))) { scalePoints=[]; cables=[{ type: selectCableType.value || 'cat6', points: [] }]; devices=[]; wireways=[{ points: [] }]; actionHistory=[]; redoHistory=[]; activeCableIndex=0; activeWirewayIndex=0; pixelsPerMeter=null; gridOffsetX=0; gridOffsetY=0; redraw(); autoSave(); } });
 
     btnExportPlan.addEventListener('click', () => {
         if (!img.src) return;
-        const data = { scalePoints, cables, devices, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
+        const data = { scalePoints, cables, devices, wireways, pixelsPerMeter, zoom, cameraX, cameraY, gridOffsetX, gridOffsetY };
         if (img.src.length < 1500000) data.imgSrc = img.src;
         const jsonStr = JSON.stringify(data);
         const blob = new Blob([jsonStr], { type: "application/json" });
@@ -1534,6 +1668,47 @@ const i18n = {
 
         // ponytail: Added showLayers toggle check to support layer visibility
         if (showLayers) {
+            // Rajzoljuk le a nyomvonalakat (wireways) legelőször, hogy a kábelek és eszközök rákerüljenek
+            wireways.forEach((wirewayObj, wIndex) => {
+                let points = wirewayObj.points;
+                if (points.length === 0) return;
+
+                // 1. Vastag külső szürke vonal
+                ctx.strokeStyle = '#7c7f93'; 
+                ctx.lineWidth = (wIndex === activeWirewayIndex && mode === 'wireway' ? 10 : 8) / zoom;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+                ctx.stroke();
+
+                // 2. Belső fehér szaggatott vonal csatorna kinézethez
+                ctx.strokeStyle = '#f4f4f7';
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+                ctx.stroke();
+                ctx.setLineDash([]); // reset line dash
+
+                // Pontok/húzókák kirajzolása wireway vagy drag módban
+                if (mode === 'wireway' || mode === 'drag') {
+                    points.forEach((p, i) => {
+                        ctx.globalAlpha = draggedPoint && hasDragged && draggedPoint.type === 'wireway' && draggedPoint.wirewayIndex === wIndex && draggedPoint.index === i && !isExport ? 0.4 : 1.0;
+                        ctx.strokeStyle = '#7c7f93';
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.fillStyle = wIndex === activeWirewayIndex && mode === 'wireway' ? '#a6da95' : 'white';
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, (wIndex === activeWirewayIndex && mode === 'wireway' ? 6 : 4) / zoom, 0, 2*Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.globalAlpha = 1.0;
+                    });
+                }
+            });
+
             // Kábelek és pontok rajzolása
 
             cables.forEach((cableObj, cIndex) => {

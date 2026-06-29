@@ -861,7 +861,7 @@ const i18n = {
 
         if (activePlaceDevice && btn === 0) { 
             let p = applyGridSnap(wPos);
-            devices.push({ type: activePlaceDevice, x: p.x, y: p.y, name: null }); 
+            devices.push({ id: Math.random().toString(36).substr(2, 9), type: activePlaceDevice, x: p.x, y: p.y, name: null }); 
             actionHistory.push({ type: 'device' });
             redraw(); 
             return; 

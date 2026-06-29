@@ -81,6 +81,7 @@ const i18n = {
     let lastPinchCenter = null;
     let selectedDeviceIds = new Set(), selectionBox = null, selectionStartPos = null, selectedDeviceOrigPositions = {}, wStartPos = null;
     let pendingPlanData = null;
+    let draggedDeviceOrigPosition = null;
     
     // ponytail: Removed custom crosshair variables
 
@@ -888,6 +889,12 @@ const i18n = {
                 const hovPos = hov.type === 'device' ? getDeviceDrawPos(hov.index) : hov.array[hov.index];
                 dragOffsetX = hovPos.x - wPos.x;
                 dragOffsetY = hovPos.y - wPos.y;
+                if (hov.type === 'device') {
+                    const dev = devices[hov.index];
+                    draggedDeviceOrigPosition = { id: dev.id, x: dev.x, y: dev.y };
+                } else {
+                    draggedDeviceOrigPosition = null;
+                }
                 if (hov.type === 'cable') { 
                     activeCableIndex = hov.cableIndex; 
                 }
@@ -1171,7 +1178,20 @@ const i18n = {
                     selectionBox = null;
                     selectionStartPos = null;
                 }
-                if (hasDragged) {
+                if (draggedPoint.type === 'multi-move' && hasDragged) {
+                    const moves = [];
+                    selectedDeviceIds.forEach(id => {
+                        const dev = devices.find(x => x.id === id);
+                        const orig = selectedDeviceOrigPositions[id];
+                        if (dev && orig && (dev.x !== orig.x || dev.y !== orig.y)) {
+                            moves.push({ id: id, from: { x: orig.x, y: orig.y }, to: { x: dev.x, y: dev.y } });
+                        }
+                    });
+                    if (moves.length > 0) {
+                        actionHistory.push({ type: 'move', moves: moves });
+                    }
+                    autoSave();
+                } else if (hasDragged) {
                     autoSave();
                 }
             }
@@ -1188,8 +1208,19 @@ const i18n = {
             openSwitchModal(dev);
             return;
         }
+        if (hasDragged && draggedPoint && draggedPoint.type === 'device' && draggedDeviceOrigPosition) {
+            const dev = devices[draggedPoint.index];
+            const orig = draggedDeviceOrigPosition;
+            if (dev && orig && (dev.x !== orig.x || dev.y !== orig.y)) {
+                actionHistory.push({
+                    type: 'move',
+                    moves: [{ id: orig.id, from: { x: orig.x, y: orig.y }, to: { x: dev.x, y: dev.y } }]
+                });
+            }
+        }
         if (draggedPoint || hasDragged) autoSave();
         draggedPoint = null;
+        draggedDeviceOrigPosition = null;
         redraw();
     }
 
@@ -1454,7 +1485,16 @@ const i18n = {
         try {
             const lastAction = actionHistory.pop();
             if (lastAction) {
-                if (lastAction.type === 'device' && devices.length > 0) {
+                if (lastAction.type === 'move') {
+                    lastAction.moves.forEach(m => {
+                        const dev = devices.find(x => x.id === m.id);
+                        if (dev) {
+                            dev.x = m.from.x;
+                            dev.y = m.from.y;
+                        }
+                    });
+                    redoHistory.push(lastAction);
+                } else if (lastAction.type === 'device' && devices.length > 0) {
                     const popped = devices.pop();
                     redoHistory.push({ type: 'device', device: popped });
                 } else if (lastAction.type === 'wireway') {
@@ -1498,7 +1538,16 @@ const i18n = {
         try {
             const nextAction = redoHistory.pop();
             if (nextAction) {
-                if (nextAction.type === 'device') {
+                if (nextAction.type === 'move') {
+                    nextAction.moves.forEach(m => {
+                        const dev = devices.find(x => x.id === m.id);
+                        if (dev) {
+                            dev.x = m.to.x;
+                            dev.y = m.to.y;
+                        }
+                    });
+                    actionHistory.push(nextAction);
+                } else if (nextAction.type === 'device') {
                     devices.push(nextAction.device);
                     actionHistory.push({ type: 'device' });
                 } else if (nextAction.type === 'wirewayPoint') {

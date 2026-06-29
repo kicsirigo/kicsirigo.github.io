@@ -156,15 +156,23 @@ const i18n = {
     document.getElementById('upload').addEventListener('change', e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        if (file.name.endsWith('.json') || file.name.endsWith('.plan')) {
+        const nameLower = file.name.toLowerCase();
+        if (nameLower.endsWith('.json') || nameLower.endsWith('.plan')) {
             reader.onload = ev => {
                 try {
                     const data = JSON.parse(ev.target.result);
-                    if (data.imgSrc) { img.onload = () => { resizeCanvas(); restoreState(data, true); }; img.src = data.imgSrc; }
+                    if (data.imgSrc) { 
+                        img.onload = () => { resizeCanvas(); restoreState(data, true); }; 
+                        img.src = data.imgSrc; 
+                    } else if (img.src) {
+                        restoreState(data, false);
+                    } else {
+                        alert('This plan file does not contain a floorplan image. Please upload a floorplan image first, then import this plan.');
+                    }
                 } catch (err) { alert('Error loading JSON data'); }
             };
             reader.readAsText(file);
-        } else if (file.type === 'application/pdf') {
+        } else if (file.type === 'application/pdf' || nameLower.endsWith('.pdf')) {
             reader.onload = event => {
                 pdfjsLib.getDocument(new Uint8Array(event.target.result)).promise.then(pdf => pdf.getPage(1)).then(page => {
                     const vp = page.getViewport({scale: 2.0}), tc = document.createElement('canvas'), tctx = tc.getContext('2d');

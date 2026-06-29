@@ -1353,7 +1353,28 @@ const i18n = {
     // EZEKET MEGTARTOTTUK (maradtak a helyükön):
     btnScale.addEventListener('click', () => { mode = 'scale'; scalePoints = []; pixelsPerMeter = null; btnScale.classList.add('active'); btnMeasure.classList.remove('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); btnSetScale.disabled = true; redraw(); });
     btnMeasure.addEventListener('click', () => { mode = 'measure'; btnScale.classList.remove('active'); btnMeasure.classList.add('active'); btnConnect.classList.remove('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
-    btnNewCable.addEventListener('click', () => { if (cables[activeCableIndex].points.length > 0) { cables.push({ type: selectCableType.value || 'cat6', points: [] }); activeCableIndex = cables.length - 1; btnNewCable.classList.add('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); autoSave(); } });
+    btnNewCable.addEventListener('click', () => {
+        mode = 'measure';
+        btnMeasure.classList.add('active');
+        btnNewCable.classList.remove('active');
+        btnScale.classList.remove('active');
+        btnConnect.classList.remove('active');
+        btnDelete.classList.remove('active');
+        btnDrag.classList.remove('active');
+        btnSelect.classList.remove('active');
+        btnWireway.classList.remove('active');
+        btnNewWireway.classList.remove('active');
+        document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
+        selectedDeviceIds.clear();
+        
+        if (cables[activeCableIndex].points.length > 0) {
+            cables.push({ type: selectCableType.value || 'cat6', points: [] });
+            activeCableIndex = cables.length - 1;
+            btnNewCable.classList.add('active');
+            autoSave();
+        }
+        redraw();
+    });
     btnConnect.addEventListener('click', () => { mode = 'connect'; connectState = { devA: null, portA: null }; btnScale.classList.remove('active'); btnMeasure.classList.remove('active'); btnConnect.classList.add('active'); btnNewCable.classList.remove('active'); btnDelete.classList.remove('active'); btnDrag.classList.remove('active'); btnSelect.classList.remove('active'); btnWireway.classList.remove('active'); btnNewWireway.classList.remove('active'); document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode'); selectedDeviceIds.clear(); redraw(); });
     btnDelete.addEventListener('click', () => {
         if (mode === 'select') {
@@ -1450,22 +1471,26 @@ const i18n = {
     });
 
     btnNewWireway.addEventListener('click', () => {
+        mode = 'wireway';
+        btnWireway.classList.add('active');
+        btnNewWireway.classList.remove('active');
+        btnScale.classList.remove('active');
+        btnMeasure.classList.remove('active');
+        btnConnect.classList.remove('active');
+        btnNewCable.classList.remove('active');
+        btnDelete.classList.remove('active');
+        btnDrag.classList.remove('active');
+        btnSelect.classList.remove('active');
+        document.getElementById('canvas-container').classList.remove('delete-mode', 'drag-mode', 'select-mode');
+        selectedDeviceIds.clear();
+
         if (wireways[activeWirewayIndex].points.length > 0) {
             wireways.push({ points: [] });
             activeWirewayIndex = wireways.length - 1;
             btnNewWireway.classList.add('active');
-            btnWireway.classList.add('active');
-            btnScale.classList.remove('active');
-            btnMeasure.classList.remove('active');
-            btnConnect.classList.remove('active');
-            btnNewCable.classList.remove('active');
-            btnDelete.classList.remove('active');
-            btnDrag.classList.remove('active');
-            btnSelect.classList.remove('active');
-            selectedDeviceIds.clear();
-            redraw();
             autoSave();
         }
+        redraw();
     });
 
     function deleteSelectedDevices() {

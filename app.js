@@ -82,6 +82,7 @@ const i18n = {
     let selectedDeviceIds = new Set(), selectionBox = null, selectionStartPos = null, selectedDeviceOrigPositions = {}, wStartPos = null;
     let pendingPlanData = null;
     let draggedDeviceOrigPosition = null;
+    let lastMouseWorldPos = null;
     
     // ponytail: Removed custom crosshair variables
 
@@ -507,9 +508,12 @@ const i18n = {
             if (!btnNewWireway.disabled) btnNewWireway.click();
         }
         
-        // Delete / Backspace: delete selection
         else if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (selectedDeviceIds.size > 0) {
+            if (mode === 'connect' && connectState.devA && connectState.points && connectState.points.length > 0) {
+                e.preventDefault();
+                connectState.points.pop();
+                redraw();
+            } else if (selectedDeviceIds.size > 0) {
                 e.preventDefault();
                 deleteSelectedDevices();
             } else if (mode === 'delete') {
@@ -727,6 +731,10 @@ const i18n = {
         if (mode === 'connect') {
             if (hov && hov.type === 'device') {
                 showPortPopup(hov.index, wPos.x, wPos.y);
+            } else if (connectState.devA) {
+                connectState.points = connectState.points || [];
+                connectState.points.push(applyGridSnap(wPos));
+                redraw();
             } else {
                 hidePortPopup();
             }
@@ -987,9 +995,10 @@ const i18n = {
         }
     }
 
-    // ponytail: Removed custom crosshair tracking and simplified touch events
     function handleMove(e, isTouch) {
         if (!img.src) return;
+        const wPos = getWorldPos(e);
+        lastMouseWorldPos = wPos;
 
         if (isPanningGrid) {
             hasDragged = true;
@@ -1832,6 +1841,36 @@ const i18n = {
             });
 
 
+            // Connect mode preview path
+            if (mode === 'connect' && connectState.devA && lastMouseWorldPos) {
+                const devA = devices.find(d => d.id === connectState.devA);
+                if (devA) {
+                    ctx.strokeStyle = '#a6da95'; // green preview color
+                    ctx.lineWidth = 4 / zoom;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(devA.x, devA.y);
+                    const pts = connectState.points || [];
+                    pts.forEach(p => ctx.lineTo(p.x, p.y));
+                    ctx.lineTo(lastMouseWorldPos.x, lastMouseWorldPos.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Also draw small dots on intermediate draft points
+                    pts.forEach(p => {
+                        ctx.strokeStyle = '#a6da95';
+                        ctx.fillStyle = 'white';
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 4 / zoom, 0, 2*Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                }
+            }
+
             // Eszközök rajzolása
             const drawDevice = (d, i) => {
                 const pos = getDeviceDrawPos(i);
@@ -2123,71 +2162,25 @@ const i18n = {
                 if (!connectState.devA) {
                     connectState.devA = dev.id;
                     connectState.portA = i;
+                    connectState.points = [];
                 } else {
-                    // Find positions of both devices and auto-route via wire-way if one is nearby
-                    const dA = devices.find(d => d.id === connectState.devA);
-                    const dB = dev;
-                    let cablePoints = [];
-                    if (dA && dB) {
-                        const xA = dA.x, yA = dA.y;
-                        const xB = dB.x, yB = dB.y;
-                        
-                        let bestWireway = null;
-                        let bestStartIdx = -1;
-                        let bestEndIdx = -1;
-                        let bestScore = Infinity;
-                        
-                        wireways.forEach(W => {
-                            if (W.points.length < 2) return;
-                            let startIdx = -1, startDist = Infinity;
-                            let endIdx = -1, endDist = Infinity;
-                            for (let j = 0; j < W.points.length; j++) {
-                                let distA = Math.hypot(W.points[j].x - xA, W.points[j].y - yA);
-                                if (distA < startDist) {
-                                    startDist = distA;
-                                    startIdx = j;
-                                }
-                                let distB = Math.hypot(W.points[j].x - xB, W.points[j].y - yB);
-                                if (distB < endDist) {
-                                    endDist = distB;
-                                    endIdx = j;
-                                }
-                            }
-                            if (startDist < 300 && endDist < 300) {
-                                let score = startDist + endDist;
-                                if (score < bestScore) {
-                                    bestScore = score;
-                                    bestWireway = W;
-                                    bestStartIdx = startIdx;
-                                    bestEndIdx = endIdx;
-                                }
-                            }
-                        });
-                        
-                        if (bestWireway) {
-                            if (bestStartIdx <= bestEndIdx) {
-                                cablePoints = bestWireway.points.slice(bestStartIdx, bestEndIdx + 1).map(p => ({ x: p.x, y: p.y }));
-                            } else {
-                                cablePoints = bestWireway.points.slice(bestEndIdx, bestStartIdx + 1).map(p => ({ x: p.x, y: p.y })).reverse();
-                            }
-                        }
-                    }
-
+                    if (connectState.devA === dev.id) return; // same device
                     // Create smart cable
                     cables.push({
                         type: selectCableType.value || 'cat6',
                         fromDev: connectState.devA, fromPort: connectState.portA,
                         toDev: dev.id, toPort: i,
-                        points: cablePoints
+                        points: connectState.points || []
                     });
                     // Update connection strings
+                    const dA = devices.find(d => d.id === connectState.devA);
                     if (!dev.ports[i]) dev.ports[i] = {};
                     if (dA) {
                         if (!dA.ports[connectState.portA]) dA.ports[connectState.portA] = {};
                         dA.ports[connectState.portA].conn = `${dev.type.toUpperCase()} port ${i}`;
                     }
                     dev.ports[i].conn = `${dA ? dA.type.toUpperCase() : '?'} port ${connectState.portA}`;
-                    connectState = { devA: null, portA: null };
+                    connectState = { devA: null, portA: null, points: [] };
                     mode = 'none'; btnConnect.classList.remove('active'); btnNewCable.classList.remove('active');
                     redraw(); autoSave();
                 }

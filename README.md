@@ -9,10 +9,11 @@ Vibecoded with Gemini & refined using minimalist code design principles.
 ## ✨ Features
 
 - **🌐 Image Support**: Load floorplans as standard image files.
-- **📏 Calibration & Scaling**: Calibrate the drawing canvas by selecting a line of known distance (e.g., a wall) and entering its real-world length.
+- **📏 Calibration & Scaling (Optional)**: Calibrate the drawing canvas by selecting a line of known distance (e.g., a wall) and entering its real-world length. Scaling is optional, meaning you can start designing network paths immediately without scaling first.
 - **🔌 Cable Estimation & Types**: Draw multiple independent cable runs and get real-time length estimation. Choose from distinct **Cable Types** (Cat5e, Cat6, Cat6a, Fiber, Power) which are color-coded, and see your total lengths automatically aggregated by type!
+- **🛤️ Wire-way Routing**: Draft structural pathways or conduits. Wire-ways are styled as thick slate-grey channels with a dashed core. They fully support point dragging, segment insertions, element deletion, and plan save/restore.
 - **🖱️ Drag Mode (Move & Resize)**: Disables accidental clicks while dragging. Activate **Drag** mode to:
-  - Drag and move devices or cable points.
+  - Drag and move devices, cable points, or wire-way points.
   - Dynamically resize **Rack Cabinets** from any border or corner with contextual cursors.
 - **🏢 Intelligent Layering**: Placed rack cabinets act as background containers. Non-rack devices placed inside them are automatically layered on top, ensuring they remain easy to select, drag, or configure.
 - **🗃️ Multi-Select & Batch Operations**: Select multiple devices at once using marquee box-selection. Move selected batches together, or delete them in a single action. Supports `Shift`/`Ctrl` clicks to fine-tune selections.
@@ -41,10 +42,10 @@ Vibecoded with Gemini & refined using minimalist code design principles.
    - Click the **Scale** button (or press `S`).
    - Click on the start and end point of a known distance (like a door width or wall line).
    - Adjust the points if needed, click **Confirm**, and enter the real-world distance in meters.
-3. **Draft Cables**:
+3. **Draft Cables & Wire-ways**:
    - Select your desired **Cable Type** (e.g., Cat6, Fiber) from the dropdown in the top toolbar.
-   - Click **Draw Cables** (or press `M`) and tap/click along the floorplan to measure paths.
-   - Use **New Cable** (or press `N`) to start a separate segment.
+   - Click **Draw Cables** (or press `M`) and tap/click along the floorplan to measure paths. Use **New Cable** (or press `N`) to start a separate segment.
+   - Click **Wire-way** (or press `W`) and tap/click along the floorplan to draw structural pathway channels. Use **New** (or press `Q`) next to it to start a separate wire-way path.
 4. **Place Devices**:
    - Select a device from the sidebar (Router, Switch, Patch Panel, AP, or PC).
    - Click anywhere on the map to place the device. Active device selection will show a visual pulse.
@@ -85,6 +86,8 @@ Speed up your drafting workflow using these keyboard shortcuts:
 | **`V`** | Select Tool | Activates multi-select marquee mode |
 | **`M`** | Cables Tool | Activates draw cables mode |
 | **`N`** | New Cable | Starts a new cable path segment |
+| **`W`** | Wire-way Tool | Activates draw wire-ways mode |
+| **`Q`** | New Wire-way | Starts a new wire-way path segment |
 | **`C`** | Connect Tool | Activates smart port connection mode |
 | **`E`** | Delete Tool | Toggles single-element delete mode |
 

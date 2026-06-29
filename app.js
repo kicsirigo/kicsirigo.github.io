@@ -157,8 +157,7 @@ const i18n = {
         redraw();
     }
 
-    document.getElementById('upload').addEventListener('change', e => {
-        const file = e.target.files[0]; if (!file) return;
+    function handleFileLoad(file) {
         const reader = new FileReader();
         const nameLower = file.name.toLowerCase();
         if (nameLower.endsWith('.json') || nameLower.endsWith('.plan')) {
@@ -188,6 +187,22 @@ const i18n = {
         } else {
             reader.onload = ev => loadImageData(ev.target.result); reader.readAsDataURL(file);
         }
+    }
+
+    document.getElementById('upload').addEventListener('change', e => {
+        const file = e.target.files[0]; if (!file) return;
+        handleFileLoad(file);
+    });
+
+    window.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    window.addEventListener('drop', e => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileLoad(file);
     });
 
     function loadImageData(src) {
@@ -395,8 +410,11 @@ const i18n = {
             return;
         }
 
-        // Ctrl + O: Open layout (even when file choose is hidden)
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        // Alt + O / O / Ctrl + O: Open layout
+        const isCtrlO = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o';
+        const isAltO = e.altKey && e.key.toLowerCase() === 'o';
+        const isKeyO = e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey && !e.altKey;
+        if (isCtrlO || isAltO || isKeyO) {
             e.preventDefault();
             const uploadBtn = document.getElementById('upload');
             if (uploadBtn) uploadBtn.click();

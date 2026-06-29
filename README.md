@@ -75,7 +75,7 @@ Speed up your drafting workflow using these keyboard shortcuts:
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
-| **`O`** / **`Alt + O`** / **`Ctrl + O`** | Open Plan | Opens the file picker to load a layout (PDF/Image) or `.plan` workspace (single key `O` or `Alt + O` are recommended on local `file://` protocols) |
+| **`O`** / **`Alt + O`** | Open Plan | Opens the file picker to load a layout (PDF/Image) or `.plan` workspace |
 | **`Ctrl + Z`** | Undo | Rolls back the last action |
 | **`Ctrl + Y`** | Redo | Re-applies a rolled-back action |
 | **`F2`** | Rename | Renames the selected device or hovered device |

@@ -410,11 +410,10 @@ const i18n = {
             return;
         }
 
-        // Alt + O / O / Ctrl + O: Open layout
-        const isCtrlO = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o';
+        // Alt + O / O: Open layout
         const isAltO = e.altKey && e.key.toLowerCase() === 'o';
         const isKeyO = e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey && !e.altKey;
-        if (isCtrlO || isAltO || isKeyO) {
+        if (isAltO || isKeyO) {
             e.preventDefault();
             const uploadBtn = document.getElementById('upload');
             if (uploadBtn) uploadBtn.click();

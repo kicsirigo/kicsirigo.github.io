@@ -78,6 +78,7 @@ const i18n = {
     let lastPinchDistance = null;
     let lastPinchCenter = null;
     let selectedDeviceIds = new Set(), selectionBox = null, selectionStartPos = null, selectedDeviceOrigPositions = {}, wStartPos = null;
+    let pendingPlanData = null;
     
     // ponytail: Removed custom crosshair variables
 
@@ -149,8 +150,6 @@ const i18n = {
         }
         // status.innerText = t('statLoaded');
         redraw();
-        const uploadGrp = document.getElementById('upload-group');
-        if (uploadGrp) uploadGrp.style.display = 'none';
     }
 
     document.getElementById('upload').addEventListener('change', e => {
@@ -167,7 +166,8 @@ const i18n = {
                     } else if (img.src) {
                         restoreState(data, false);
                     } else {
-                        alert('This plan file does not contain a floorplan image. Please upload a floorplan image first, then import this plan.');
+                        pendingPlanData = data;
+                        alert('This plan file does not contain a floorplan image. Please upload the corresponding floorplan image (PDF or Image) now.');
                     }
                 } catch (err) { alert('Error loading JSON data'); }
             };
@@ -188,14 +188,17 @@ const i18n = {
     function loadImageData(src) {
         img.onload = () => {
             resizeCanvas();
-            scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; redoHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
-            zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
-            cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
-            btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
-            btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
+            if (pendingPlanData) {
+                restoreState(pendingPlanData, true);
+                pendingPlanData = null;
+            } else {
+                scalePoints = []; cables = [{ type: selectCableType.value || 'cat6', points: [] }]; devices = []; actionHistory = []; redoHistory = []; activeCableIndex = 0; pixelsPerMeter = null; mode = 'none';
+                zoom = Math.min(canvas.width/img.width, canvas.height/img.height) * 0.95;
+                cameraX = (canvas.width - img.width * zoom) / 2; cameraY = (canvas.height - img.height * zoom) / 2;
+                btnScale.disabled = false; btnExport.disabled = false; btnExportPlan.disabled = false; btnUndo.disabled = false;
+                btnMeasure.disabled = btnNewCable.disabled = btnConnect.disabled = btnDelete.disabled = btnClear.disabled = selectCableType.disabled = btnDrag.disabled = btnSelect.disabled = false;
+            }
             // status.innerText = t('statLoaded'); redraw();
-            const uploadGrp = document.getElementById('upload-group');
-            if (uploadGrp) uploadGrp.style.display = 'none';
         }; img.src = src;
     }
 
